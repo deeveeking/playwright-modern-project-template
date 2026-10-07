@@ -1,0 +1,28 @@
+{
+  "name": "playwright-modern-project-template",
+  "version": "1.0.0",
+  "description": "Playwright + All Last Features",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deeveeking/playwright-modern-project-template.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/deeveeking/playwright-modern-project-template/issues"
+  },
+  "homepage": "https://github.com/deeveeking/playwright-modern-project-template#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4"
+  },
+  "dependencies": {
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "pino-pretty": "^13.2.0"
+  }
+}
