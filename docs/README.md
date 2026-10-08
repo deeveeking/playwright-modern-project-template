@@ -12,4 +12,5 @@ The project is a Playwright test boilerplate for API and UI tests. It also has f
 - [TypeScript Config](./typescript-config.md)
 - [Commands](./commands.md)
 - [CI](./ci.md)
+- [API Request Helper](./api-request-helper.md)
 
