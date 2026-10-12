@@ -10,6 +10,7 @@ It uses modern Playwright features and clean design patterns. The goal is to hel
 - UI test structure
 - Page object structure
 - Helper structure
+- API request logging with Pino and colored console output
 - Visual test placeholders
 - Accessibility test placeholders
 - Performance test placeholders

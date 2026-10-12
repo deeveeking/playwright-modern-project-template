@@ -67,9 +67,17 @@ const env = getEnvironment();
 
 ## Current Values
 
+| Environment | `baseURL` |
+| --- | --- |
+| `dev` | `https://www.dev.automationexercise.com/` |
+| `stage` | `https://www.stage.automationexercise.com/` |
+| `prod` | `https://www.automationexercise.com/` |
+
+The stage `baseURL` is an invalid test URL used as a placeholder.
+
 | Environment | `baseApiURL` | `timeout` | `retries` | `projects` |
 | --- | --- | --- | --- | --- |
-| `dev` | `https://reqres.in` | `middleWaitTimeout` | `0` | `chromium` |
-| `stage` | `https://staging.reqres.in` | `middleWaitTimeout` | `0` | `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari` |
-| `prod` | `https://reqres.in` | `0` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
+| `dev` | `http://localhost:8091` | `middleWaitTimeout` | `0` | `chromium` |
+| `stage` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari` |
+| `prod` | `https://api.practicesoftwaretesting.com` | `0` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
 

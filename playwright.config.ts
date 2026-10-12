@@ -65,8 +65,18 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  /* Configure projects for the selected environment */
-  projects: env.projects.map((projectName) => availableProjects[projectName]),
+  /* Run API tests once and other tests in the selected browser projects. */
+  projects: [
+    {
+      name: 'api',
+      testDir: './tests/api',
+      use: { baseURL: env.baseApiURL },
+    },
+    ...env.projects.map((projectName) => ({
+      ...availableProjects[projectName],
+      testIgnore: '**/tests/api/**',
+    })),
+  ],
 
   /* Run your local dev server before starting the tests */
   // webServer: {
