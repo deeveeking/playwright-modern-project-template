@@ -7,7 +7,7 @@ This project has a simple structure for a modern Playwright test framework.
 | Path | Purpose |
 | --- | --- |
 | `api/` | Place for API clients, API helpers, and request logic. |
-| `helpers/` | Place for shared helper functions, including the API request helper. |
+| `helpers/` | Shared helpers, including `ApiRequestHelper` and the Pino loggers in `loggerHelper.ts`. |
 | `helpers/types/` | Place for helper-related types. |
 | `pages/` | Place for page objects used by UI tests. |
 | `config/` | Place for environment config and config types. |

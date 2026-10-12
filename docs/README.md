@@ -13,4 +13,6 @@ The project is a Playwright test boilerplate for API and UI tests. It also has f
 - [Commands](./commands.md)
 - [CI](./ci.md)
 - [API Request Helper](./api-request-helper.md)
+- [User API](./user-api.md)
+- [Logger Helper](./logger-helper.md)
 
