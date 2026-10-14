@@ -44,7 +44,7 @@ export type ExecuteApiRequestParams<TRequest = unknown> = {
 
 Use `executeApiRequest` to send API requests.
 
-Use `params` for URL query parameters. The helper automatically attaches the Bearer token except for `/users/login` and `/users/register`. It builds authorization headers internally; custom request headers are not exposed in `ExecuteApiRequestParams`. A `204 No Content` response returns `undefined`; use `void` as the response type. Other successful responses are parsed as JSON.
+Use `params` for URL query parameters. Every call to `executeApiRequest()` automatically attaches the Bearer token, including requests to public endpoints such as `/users/register`. It builds authorization headers internally; custom request headers are not exposed in `ExecuteApiRequestParams`. A `204 No Content` response returns `undefined`; use `void` as the response type. Other successful responses are parsed as JSON.
 
 ```ts
 const user = await ApiRequestHelper.executeApiRequest<UserResponse, unknown>({
@@ -70,9 +70,9 @@ const user = await ApiRequestHelper.executeApiRequest<CreateUserResponse, Create
 
 `getApiToken(): Promise<string>` reads `API_EMAIL` and `API_PASSWORD` from the process environment, sends `POST /users/login`, validates `access_token`, and returns it. The token request is cached, so concurrent and subsequent calls reuse it. Failed token requests are removed from the cache so a later call can retry.
 
-The helper determines authentication from the URL pathname. Routes in its `publicEndpoints` set (`/users/login` and `/users/register`) do not obtain or receive the cached token. Query parameters and trailing slashes do not affect this check. This also prevents recursion when `getApiToken()` sends its login request. For all other routes, the helper awaits `getApiToken()` and adds `Authorization: Bearer <token>`. Missing credentials or failed authentication prevent that request from being sent. Add any future public routes to `publicEndpoints`.
+Every call to `executeApiRequest()` awaits `getApiToken()` and adds `Authorization: Bearer <token>`. Missing credentials or failed authentication prevent the requested operation from being sent, including registration. To obtain the initial token without recursion, `getApiToken()` sends its login request directly through `APIRequestContext.post()`, without calling `executeApiRequest()` or adding a Bearer header. It logs the login response and checks HTTP status, JSON parsing, and token validity before caching the result.
 
-`UserApi.login(body)` remains an ordinary request: it returns the login response without reading, replacing, or clearing the helper's token. `clearAccessToken()` clears the cached token without closing the context. Successful `UserApi.logout()` and `dispose()` also clear it; the next authenticated request obtains a new token. The singleton holds one token per process, shared by API clients in that process. Clear the cache after changing credentials or when the token expires; automatic refresh is not implemented.
+`getApiToken()` manages the cached token request and clears it on failure. The private async method `requestApiToken()` performs the login with `try/catch`, using `LoginUserRequest` and `LoginUserResponse` from `api/userApi/types.ts`. `UserApi` does not expose a login method. `executeApiRequest()` builds the authorization header directly. `clearAccessToken()` clears the cached token without closing the context. Successful `UserApi.logout()` and `dispose()` also clear it; the next authenticated request obtains a new token. The singleton holds one token per process, shared by API clients in that process. Clear the cache after changing credentials or when the token expires; automatic refresh is not implemented.
 
 ## Error Handling
 

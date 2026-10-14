@@ -6,7 +6,8 @@ Environment config lives in the `config/` folder.
 
 | File | Purpose |
 | --- | --- |
-| `config/env.ts` | Selects the current environment config. |
+| `config/env.ts` | Loads the optional root `.env` and selects the current environment config. |
+| `.env` | Optional local variables; ignored by Git. |
 | `config/types/types.ts` | Defines environment types. |
 | `config/environments/dev.ts` | Dev environment values. |
 | `config/environments/stage.ts` | Stage environment values. |
@@ -44,6 +45,32 @@ export type EnvironmentProject =
 ```
 
 ## Current Environment
+
+`process.env` contains variables available to the Node.js process. It does not automatically read `.env` files.
+
+When `config/env.ts` is imported, it loads the optional root `.env` before the environment is selected:
+
+```ts
+const envFilePath = resolve(__dirname, "../.env");
+
+if (existsSync(envFilePath)) {
+    loadEnvFile(envFilePath);
+}
+```
+
+`loadEnvFile()` reads the file into `process.env`. The `existsSync()` check avoids a missing-file error when `.env` is absent, such as in CI. Variables already supplied by the shell or CI take precedence over values from the file. Without `.env`, the project uses those process variables directly. The loader requires Node.js 20.12+.
+
+The local `.env` contains three variables:
+
+```dotenv
+TEST_ENV=dev
+API_EMAIL=
+API_PASSWORD=
+```
+
+This file demonstrates one configuration approach and is excluded by `.gitignore`. Fill in credentials locally only if needed. Prefer storing secrets in Vault or another secrets manager, with secret references for each environment. CI or runtime setup should resolve those references and inject the values through environment variables. Use `.env` only as a fallback, after excluding it from Git; the framework does not resolve Vault references itself.
+
+`API_EMAIL` and `API_PASSWORD` are read by `ApiRequestHelper` when it needs a token. They must identify an existing account for the selected API environment. Leaving them empty allows configuration to load, but API requests through the helper will fail with a missing-credentials error. Adding these values as fields in `dev.ts`, `stage.ts`, or `prod.ts` does not populate `process.env`.
 
 The current environment is read from `process.env.TEST_ENV`.
 
