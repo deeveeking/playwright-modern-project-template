@@ -4,8 +4,6 @@ import type {
     ChangeUserPasswordResponse,
     DeleteUserRequest,
     DeleteUserResponse,
-    LoginUserRequest,
-    LoginUserResponse,
     LogoutUserResponse,
     MeUserResponse,
     RegisterUserRequest,
@@ -16,18 +14,10 @@ import type {
     UpdateUserResponse,
 } from "./types";
 
-class UserApi {
+export class UserApi {
     public async register(body: RegisterUserRequest): Promise<RegisterUserResponse> {
         return ApiRequestHelper.executeApiRequest<RegisterUserResponse, RegisterUserRequest>({
             url: "/users/register",
-            method: "POST",
-            body,
-        });
-    }
-
-    public async login(body: LoginUserRequest): Promise<LoginUserResponse> {
-        return ApiRequestHelper.executeApiRequest<LoginUserResponse, LoginUserRequest>({
-            url: "/users/login",
             method: "POST",
             body,
         });

@@ -11,11 +11,11 @@ Playwright config is in `playwright.config.ts`.
 | `metadata.baseApiURL` | `env.baseApiURL` | API base URL comes from the selected environment config. |
 | `fullyParallel` | `true` | Tests can run in parallel. |
 | `forbidOnly` | `!!process.env.CI` | CI fails if `test.only` is used. |
-| `retries` | `process.env.CI ? 2 : env.retries` | CI uses two retries. Local runs use retries from the selected environment config. |
+| `retries` | `env.retries` | Both CI and local runs use retries from the selected environment config. |
 | `workers` | `process.env.CI ? 1 : undefined` | CI uses one worker. Local runs can use default workers. |
 | `reporter` | `html` | Playwright creates an HTML report. |
 | `use.baseURL` | `env.baseURL` | UI base URL comes from the selected environment config. |
-| `projects` | `env.projects` | Browser projects come from the selected environment config. |
+| `projects` | `api` plus `env.projects` | API tests run in one dedicated project; browser projects come from the selected environment config. |
 | `trace` | `on-first-retry` | Trace is saved on first retry. |
 
 ## Base URLs
@@ -33,6 +33,8 @@ The API URL is stored in `metadata.baseApiURL`, so API helpers and tests can rea
 
 The project chooses browser projects from the selected environment.
 
+The `api` project uses `testDir: './tests/api'` and `use.baseURL: env.baseApiURL`. Browser projects exclude that folder with `testIgnore: '**/tests/api/**'`, so API tests are not repeated for each browser. Other test folders remain included in browser projects.
+
 | Environment | Browser projects |
 | --- | --- |
 | `dev` | Chromium |
@@ -41,10 +43,7 @@ The project chooses browser projects from the selected environment.
 
 ## Optional Settings
 
-The config also has commented examples for:
+The config includes a commented example for starting a local web server before tests.
 
-- `.env` file support with `dotenv`
-- mobile browsers
-- branded browsers
-- local web server before tests
+The optional root `.env` is loaded by `config/env.ts` using Node.js `loadEnvFile()` before `getEnvironment()` selects the configuration. No `dotenv` dependency is used. See [Environment Config](./environment-config.md#current-environment).
 
