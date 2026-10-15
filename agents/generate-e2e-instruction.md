@@ -6,7 +6,7 @@
 
 - Place API tests in `tests/api/`; place smoke tests in `tests/api/smoke/`.
 - Name spec files after the API being tested, for example `userApi.spec.ts`.
-- Group related tests with `test.describe`, for example `User API Tests`.
+- Group related tests with `test.describe`, for example `User API Smoke Tests`.
 - Write test titles in English and describe the expected behavior and conditions. Preserve titles explicitly supplied by the user.
 - Use TypeScript, four-space indentation, double quotes, and semicolons, following the existing API tests.
 - Import `test` and `expect` from `@playwright/test`. Use `import type` for type-only imports.
@@ -21,7 +21,9 @@
 - Call `await ApiRequestHelper.dispose()` in `afterAll` to release the shared request context and clear the cached token.
 - Each factory getter creates a new client. Do not add client caching, factory functions, enums, or a switch-based API selector when generating tests.
 - Keep tests independent: do not rely on another test creating data or on execution order. Setup hooks may run again in another worker or on retry.
-- Disposing the request context does not delete server data. When adding data cleanup, track only records created by the test and check the endpoint's permissions. `UserApi.delete` requires an admin account.
+- For an update test, create a separate user in that test, copy its request data, and change only the target field. Check the update response and read the user back to verify the saved field. The current email update test searches by full name and compares `data[0].email`. Updating this new user through the shared environment account requires admin credentials.
+- Disposing the request context does not delete server data. Record the IDs created by registration and update tests in `createdUserIds`; delete them in `afterAll` before disposing the context. The deletion test deletes its own user and does not add its ID to this list. `UserApi.delete` requires an admin account, so the whole current smoke suite requires admin credentials.
+- For a deletion test, create its user within the test and await deletion by the returned ID. The current test relies on the helper to throw for a non-success response; it does not separately assert the return value. Search by the unique email afterward and check both an empty `data` array and `total: 0`.
 
 ### Request data
 
@@ -40,6 +42,7 @@
 
 - Call API client methods from tests, for example `await userApi.register(request)`.
 - API clients live under `api/` and delegate HTTP requests to `ApiRequestHelper`. Reuse existing methods and models before adding new ones.
+- Accept a single resource ID as a string, for example `userApi.delete(userId)` or `productsApi.getById(productId)`. Do not create a request interface solely to wrap an ID. Put the ID in the URL when the endpoint defines a path parameter; retain request interfaces for object payloads and query parameters.
 - Do not duplicate HTTP transport, authorization, or response logging in the spec.
 - `ApiRequestHelper.getApiToken()` obtains credentials from `API_EMAIL` and `API_PASSWORD`, performs login, and caches the token, including an in-progress login request.
 - Ordinary helper requests always attach the cached Bearer token, including registration. The credentials must therefore belong to an existing account in the selected environment.
@@ -70,23 +73,25 @@
 
 ### Registration test example
 
-The current registration spec demonstrates the required structure. When extending it, verify the full expected response against the target endpoint's contract.
+This excerpt follows the setup, cleanup, and registration case in [the current smoke spec](../tests/api/smoke/userApi.spec.ts). That file also contains the independent email update and deletion cases.
 
 ```ts
 import { expect, test } from "@playwright/test";
 import { ApiFactory } from "../../../api/apiFactory";
 import type { UserApi } from "../../../api/userApi/userApi";
 import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
-import { getRegisterUserRequest } from "../../../helpers/requestHelper";
+import { getRegisterUserRequest, getSearchUserRequest } from "../../../helpers/requestHelper";
 
-test.describe("User API Tests", () => {
+test.describe("User API Smoke Tests", () => {
     let userApi: UserApi;
+    let createdUserIds: string[] = [];
 
     test.beforeAll(async () => {
         userApi = ApiFactory.userApi;
     });
 
     test.afterAll(async () => {
+        await Promise.all(createdUserIds.map(async (id) => await userApi.delete(id)));
         await ApiRequestHelper.dispose();
     });
 
@@ -103,12 +108,23 @@ test.describe("User API Tests", () => {
             dob: request.dob,
             created_at: expect.any(String),
         };
+        const expectedGetUserResponse = {
+            ...expectedResponse,
+            provider: null,
+            totp_enabled: false,
+        };
 
         const response = await userApi.register(request);
+        createdUserIds.push(response.id);
+        const searchUserRequest = getSearchUserRequest(`${response.first_name} ${response.last_name}`);
+        const getUserResponse = await userApi.search(searchUserRequest);
 
         expect(response,
-            "Response is incorrect")
+            "Register response is incorrect")
             .toEqual(expectedResponse);
+        expect(getUserResponse.data[0],
+            'Incorrect search response')
+            .toEqual(expectedGetUserResponse);
     });
 });
 ```

@@ -2,10 +2,7 @@ import { ApiRequestHelper } from "../../helpers/apiRequestHelper";
 import type {
     ChangeUserPasswordRequest,
     ChangeUserPasswordResponse,
-    DeleteUserRequest,
     DeleteUserResponse,
-    LogoutUserResponse,
-    MeUserResponse,
     RegisterUserRequest,
     RegisterUserResponse,
     SearchUserRequest,
@@ -33,29 +30,11 @@ export class UserApi {
         });
     }
 
-    public async me(): Promise<MeUserResponse> {
-        return ApiRequestHelper.executeApiRequest<MeUserResponse, never>({
-            url: "/users/me",
-            method: "GET",
-        });
-    }
-
-    /** Requires an admin account for automatic authentication. */
-    public async delete({ userId }: DeleteUserRequest): Promise<DeleteUserResponse> {
+    public async delete(userId: string): Promise<DeleteUserResponse> {
         return ApiRequestHelper.executeApiRequest<DeleteUserResponse, never>({
             url: `/users/${encodeURIComponent(userId)}`,
             method: "DELETE",
         });
-    }
-
-    public async logout(): Promise<LogoutUserResponse> {
-        const response = await ApiRequestHelper.executeApiRequest<LogoutUserResponse, never>({
-            url: "/users/logout",
-            method: "GET",
-        });
-
-        ApiRequestHelper.clearAccessToken();
-        return response;
     }
 
     public async search(params: SearchUserRequest): Promise<SearchUserResponse> {
@@ -72,7 +51,7 @@ export class UserApi {
     ): Promise<UpdateUserResponse> {
         return ApiRequestHelper.executeApiRequest<UpdateUserResponse, UpdateUserRequest>({
             url: `/users/${encodeURIComponent(userId)}`,
-            method: "PUT",
+            method: "PATCH",
             body,
         });
     }

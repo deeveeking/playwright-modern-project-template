@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type { RegisterUserRequest } from "../api/userApi/types";
+import type { RegisterUserRequest, SearchUserRequest } from "../api/userApi/types";
 
 export const getRegisterUserRequest = (): RegisterUserRequest => {
     return {
@@ -17,5 +17,12 @@ export const getRegisterUserRequest = (): RegisterUserRequest => {
         },
         phone: faker.string.numeric({ length: 12, allowLeadingZeros: false }),
         dob: faker.date.birthdate({ min: 18, max: 65, mode: "age" }).toISOString().split("T")[0],
+    };
+};
+
+export const getSearchUserRequest = (q: string, page: number = 1): SearchUserRequest => {
+    return {
+        q,
+        page,
     };
 };
