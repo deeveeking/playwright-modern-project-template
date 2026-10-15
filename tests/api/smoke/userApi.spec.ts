@@ -30,11 +30,16 @@ test.describe("User API Smoke Tests", () => {
             phone: request.phone,
             dob: request.dob,
             created_at: expect.any(String),
+            enabled: null,
+            failed_login_attempts: null,
+            role: 'user'
         };
         const expectedGetUserResponse = {
             ...expectedResponse,
             provider: null,
             totp_enabled: false,
+            failed_login_attempts: 0,
+            enabled: true,
         };
 
         const response = await userApi.register(request);
