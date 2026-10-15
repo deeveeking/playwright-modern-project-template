@@ -48,7 +48,7 @@ Check test discovery and imports without sending API requests:
 npx playwright test --project=api --list --reporter=list
 ```
 
-The registration test creates a user in the selected environment. It requires an existing account in `API_EMAIL` and `API_PASSWORD` for the helper's automatic login. Test teardown disposes the request context; it does not delete the registered user.
+The user API smoke spec contains three cases: registration, email update, and deletion. Each creates its own user. Set `API_EMAIL` and `API_PASSWORD` to an admin account: update and deletion need it, and registration also deletes its test data during teardown. `afterAll` deletes IDs recorded by the registration and update tests, then disposes the request context. The deletion case removes its own user within the test.
 
 ## Environment Variable
 

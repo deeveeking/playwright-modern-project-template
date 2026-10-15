@@ -64,24 +64,22 @@ export interface ChangeUserPasswordResponse {
     success: boolean;
 }
 
-export interface MeUserResponse extends UserResponse {}
-
-export interface DeleteUserRequest {
-    userId: string;
-}
-
 export type DeleteUserResponse = void;
-
-export interface LogoutUserResponse {
-    message: string;
-}
 
 export interface SearchUserRequest {
     q: string;
     page?: number;
 }
 
-export type SearchUserResponse = UserResponse[];
+export interface SearchUserResponse {
+    current_page: number;
+    data: UserResponse[];
+    from: number | null;
+    last_page: number;
+    per_page: number;
+    to: number | null;
+    total: number;
+}
 
 // Swagger uses the same request schema for registration and PUT /users/{userId}.
 export interface UpdateUserRequest extends RegisterUserRequest {}
