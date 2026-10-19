@@ -14,13 +14,15 @@ Routes and types follow the [User API documentation](https://api.practicesoftwar
 
 `SearchUserResponse` is a paginated object. Users are in `response.data`; pagination fields are `current_page`, `last_page`, `per_page`, `total`, `from`, and `to`. The `from` and `to` values can be `null` when the page has no results.
 
-Set `API_EMAIL` and `API_PASSWORD` to an existing account before using any `UserApi` method, including registration. `ApiRequestHelper.getApiToken()` sends `POST /users/login` directly through the Playwright context using `LoginUserRequest` and `LoginUserResponse`, caches the token, and returns it. Every call to `executeApiRequest()` attaches `Authorization: Bearer <token>`, including public API endpoints. Only the internal request that obtains the token is sent without a Bearer header. `UserApi` has no login method; no authentication flag or token argument is needed. Deletion requires admin credentials. Search criteria are query parameters; the deletion ID is a path parameter.
+Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` to an existing admin account before using the current API suites, including registration. `ApiRequestHelper.getApiToken()` delegates `POST /users/login` to `getUserApiToken()` using `LoginUserRequest` and `LoginUserResponse`, caches the token, and returns it. Every call to `executeApiRequest()` attaches `Authorization: Bearer <token>`, including public API endpoints. Login requests are sent directly through the Playwright context without a Bearer header. `UserApi` has no login method; no authentication flag or token argument is needed. Deletion requires admin credentials. Search criteria are query parameters; the deletion ID is a path parameter.
+
+For browser authentication, `getUserApiToken({ email, password })` obtains an uncached token for the supplied user. It does not replace the admin token used by API clients. `getUserStorageState()` prepares that token under `localStorage["auth-token"]`; see [Browser authentication](./api-request-helper.md#browser-authentication).
 
 `ApiRequestHelper.dispose()` clears the cached token; the next protected request authenticates again. Failed token requests are not cached. The singleton shares one token, including an in-progress token request, per process (Playwright worker); it does not provide separate sessions for concurrent users within a worker. Call `clearAccessToken()` after changing credentials or when the token expires.
 
 ```powershell
-$env:API_EMAIL = "your-test-user@example.com"
-$env:API_PASSWORD = "YourTestPassword@123"
+$env:API_ADMIN_EMAIL = "your-test-user@example.com"
+$env:API_ADMIN_PASSWORD = "YourTestPassword@123"
 npx playwright test --project=api
 ```
 
@@ -33,7 +35,7 @@ import { ApiRequestHelper } from "../helpers/apiRequestHelper";
 const userApi = ApiFactory.userApi;
 
 try {
-    // The helper obtains the token using API_EMAIL and API_PASSWORD.
+    // The helper obtains the token using API_ADMIN_EMAIL and API_ADMIN_PASSWORD.
     const users = await userApi.search({ q: "Jane" });
 } finally {
     await ApiRequestHelper.dispose();
@@ -55,13 +57,13 @@ const response = await userApi.register(request);
 
 ## Search Request Data
 
-`getSearchUserRequest(q: string, page: number = 1): SearchUserRequest` returns `{ q, page }`. Registration and update tests pass the registered user's first and last name. The deletion test passes the unique email. Search results are available in `response.data`.
+`getSearchUserRequest(q: string, page: number = 1): SearchUserRequest` returns `{ q, page }`. Smoke registration and update tests pass the registered user's first and last name. The smoke deletion case and regression user cases search by the unique email. Search results are available in `response.data`.
 
 ## Registration Smoke Test
 
-The spec lives in [`tests/api/smoke/userApi.spec.ts`](../tests/api/smoke/userApi.spec.ts). It initializes `userApi` through `ApiFactory.userApi` in `beforeAll`, generates a fresh request, and registers a user. It builds `expectedResponse` from the submitted fields, excludes the password, and checks `id` and `created_at` with `expect.any(String)`. These two checks accept empty strings and do not validate the timestamp format.
+The spec lives in [`tests/api/smoke/adminUserApi.spec.ts`](../tests/api/smoke/adminUserApi.spec.ts). It initializes `userApi` through `ApiFactory.userApi` in `beforeAll`, generates a fresh request, and registers a user. It builds `expectedResponse` from the submitted fields, excludes the password, and checks `id` and `created_at` with `expect.any(String)`. These two checks accept empty strings and do not validate the timestamp format.
 
-The test also searches by the registered user's first and last name and compares `data[0]` with `expectedGetUserResponse`, which adds `provider: null` and `totp_enabled: false`. The current registration and update tests use the first result on the first page; they do not select by ID or follow pagination.
+The registration expectation includes `enabled: null`, `failed_login_attempts: null`, and `role: "user"`. The test also searches by the registered user's first and last name and compares `data[0]` with `expectedGetUserResponse`, which adds `provider: null` and `totp_enabled: false` and overrides `enabled` to `true` and `failed_login_attempts` to `0`. The current smoke registration and update tests use the first result on the first page; they do not select by ID or follow pagination.
 
 The registration response is compared with `toEqual()` and a custom message:
 
@@ -79,10 +81,22 @@ See [Commands](./commands.md#api-smoke-tests) for execution and [E2E Test Genera
 
 ## Email Update Smoke Test
 
-`User email is updated successfully with correct data` creates its own user, copies the registration payload, and replaces only the email with a freshly generated value. It checks the update result with `toEqual({ success: true })`, searches by the registered user's first and last name, and compares `searchResponse.data[0].email` with the new email. There is no separate assertion comparing the old and new email values.
+`Admin is update user email successfuly with correct data` creates its own user, copies the registration payload, and replaces only the email with a freshly generated value. It checks the update result with `toEqual({ success: true })`, searches by the registered user's first and last name, and compares `searchResponse.data[0].email` with the new email. There is no separate assertion comparing the old and new email values.
 
-For this test, `API_EMAIL` and `API_PASSWORD` must identify an admin account: the helper remains authenticated as that account after registration, and [the API permits updating another user only for admins](https://github.com/testsmith-io/practice-software-testing/blob/main/sprint5/API/app/Services/UserService.php). The test does not switch credentials or depend on the registration test. It records the created ID for deletion in `afterAll`.
+For this test, `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` must identify an admin account: the helper remains authenticated as that account after registration, and [the API permits updating another user only for admins](https://github.com/testsmith-io/practice-software-testing/blob/main/sprint5/API/app/Services/UserService.php). The test does not switch credentials or depend on the registration test. It records the created ID for deletion in `afterAll`.
 
 ## Deletion Smoke Test
 
-`User is deleted successfully` creates its own user and calls `userApi.delete(registeredUser.id)`. The test awaits the delete call without a separate response-value assertion; the helper throws on non-success HTTP responses and returns `undefined` for HTTP 204. It then searches by the created user's UUID-based email to avoid matching unrelated users with the same name, and checks both `data: []` and `total: 0`. This test requires admin credentials in `API_EMAIL` and `API_PASSWORD` and deletes only the user it creates. Its ID is not added to `createdUserIds`, so teardown does not attempt to delete it again.
+`Admin is delete user successfuly` creates its own user and calls `userApi.delete(registeredUser.id)`. The test awaits the delete call without a separate response-value assertion; the helper throws on non-success HTTP responses and returns `undefined` for HTTP 204. It then searches by the created user's UUID-based email to avoid matching unrelated users with the same name, and checks both `data: []` and `total: 0`. This test requires admin credentials in `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` and deletes only the user it creates. Its ID is not added to `createdUserIds`, so teardown does not attempt to delete it again.
+
+## User Regression Tests
+
+[adminUserApi.spec.ts](../tests/api/regression/adminUserApi.spec.ts) contains three independent cases:
+
+- Registration sends `email: " "` and `password: " "` and expects status 422. Both fields are present and contain a single space; this is a combined blank-fields scenario, not an invalid-email-format check.
+- Updating a newly created user with a 257-character email expects status 422. The test then searches by the original email, selects the user by ID, and verifies that the email is unchanged.
+- Searching for a user after creating and deleting it expects an empty `data` array and `total: 0`.
+
+The first two cases use `.rejects.toThrow()` with the target method, URL, and status. Only the user from the update case is recorded for deletion in `afterAll`. The search case deletes its own user without adding it to the cleanup set. There is no repeated-deletion test.
+
+See [API Regression Tests](./commands.md#api-regression-tests) for the run command. These assertions describe expected behavior; successful discovery alone does not validate the API responses.

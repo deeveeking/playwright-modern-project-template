@@ -2,6 +2,7 @@ import { ApiRequestHelper } from "../../helpers/apiRequestHelper";
 import type {
     CreateCategoryRequest,
     CreateCategoryResponse,
+    DeleteCategoryResponse,
     GetCategoryResponse,
 } from "./types";
 
@@ -18,6 +19,13 @@ export class CategoryApi {
         return ApiRequestHelper.executeApiRequest<GetCategoryResponse, never>({
             url: `/categories/tree/${encodeURIComponent(categoryId)}`,
             method: "GET",
+        });
+    }
+
+    public async delete(categoryId: string): Promise<DeleteCategoryResponse> {
+        return ApiRequestHelper.executeApiRequest<DeleteCategoryResponse, never>({
+            url: `/categories/${encodeURIComponent(categoryId)}`,
+            method: "DELETE",
         });
     }
 }

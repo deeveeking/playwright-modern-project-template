@@ -12,7 +12,17 @@ class ApiRequestHelper {
 
     public static async getApiToken(): Promise<string> {
         if (!ApiRequestHelper.tokenPromise) {
-            ApiRequestHelper.tokenPromise = ApiRequestHelper.requestApiToken();
+            const email = process.env.API_ADMIN_EMAIL;
+            const password = process.env.API_ADMIN_PASSWORD;
+
+            if (!email || !password) {
+                throw new Error("API_ADMIN_EMAIL and API_ADMIN_PASSWORD must be set for authenticated API requests");
+            }
+
+            ApiRequestHelper.tokenPromise = ApiRequestHelper.getUserApiToken({
+                email,
+                password,
+            });
         }
 
         const tokenPromise = ApiRequestHelper.tokenPromise;
@@ -27,14 +37,7 @@ class ApiRequestHelper {
         }
     }
 
-    private static async requestApiToken(): Promise<string> {
-        const email = process.env.API_EMAIL;
-        const password = process.env.API_PASSWORD;
-
-        if (!email || !password) {
-            throw new Error("API_EMAIL and API_PASSWORD must be set for authenticated API requests");
-        }
-
+    public static async getUserApiToken(body: LoginUserRequest): Promise<string> {
         const requestDetails = { method: "POST", url: "/users/login" };
         let response: APIResponse | undefined;
 
@@ -42,7 +45,6 @@ class ApiRequestHelper {
 
         try {
             const context = await ApiRequestHelper.getContext();
-            const body: LoginUserRequest = { email, password };
             response = await context.post(requestDetails.url, { data: body });
             ApiRequestHelper.logResponseStatus(response, requestDetails.method, requestDetails.url);
 

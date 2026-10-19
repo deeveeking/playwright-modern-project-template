@@ -1,12 +1,12 @@
 export interface ProductBrandResponse {
     id: string;
     name: string;
-    slug: string;
+    slug?: string;
 }
 
 export interface ProductCategoryResponse {
     id: string;
-    parent_id: string | null;
+    parent_id?: string | null;
     name: string;
     slug: string;
     sub_categories?: ProductCategoryResponse[];
@@ -29,8 +29,8 @@ export interface ProductResponse {
     price: number;
     is_location_offer?: boolean;
     is_rental?: boolean;
-    in_stock?: boolean;
-    co2_rating?: string;
+    in_stock?: boolean | number | null;
+    co2_rating?: string | null;
     is_eco_friendly?: boolean;
     brand?: ProductBrandResponse;
     category?: ProductCategoryResponse;
@@ -49,8 +49,38 @@ export interface CreateProductRequest {
     is_location_offer?: boolean;
     is_rental?: boolean;
     co2_rating?: string;
+    stock?: number;
 }
 
-export interface CreateProductResponse extends ProductResponse {}
+export interface CreateProductResponse extends ProductResponse {
+    brand: ProductBrandResponse & { slug: string };
+    category: ProductCategoryResponse;
+    product_image: ProductImageResponse;
+}
 
-export interface GetProductResponse extends ProductResponse {}
+export interface ProductSpecResponse {
+    id: string;
+    product_id: string;
+    spec_name: string;
+    spec_value: string;
+    spec_unit: string | null;
+}
+
+export interface GetProductResponse extends ProductResponse {
+    brand: Pick<ProductBrandResponse, "id" | "name">;
+    category: ProductCategoryResponse;
+    product_image: ProductImageResponse;
+    specs: ProductSpecResponse[];
+}
+
+export interface GetProductsResponse {
+    current_page: number;
+    data: ProductResponse[];
+    from: number | null;
+    last_page: number;
+    per_page: number;
+    to: number | null;
+    total: number;
+}
+
+export type DeleteProductResponse = void;
