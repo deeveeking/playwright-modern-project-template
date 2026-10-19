@@ -19,3 +19,5 @@ export interface CreateCategoryResponse extends CategoryResponse {}
 export interface GetCategoryResponse extends CategoryResponse {
     sub_categories: CategoryResponse[];
 }
+
+export type DeleteCategoryResponse = void;

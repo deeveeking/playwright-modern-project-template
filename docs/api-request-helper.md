@@ -2,7 +2,7 @@
 
 The API request helper lives in `helpers/apiRequestHelper.ts`.
 
-It creates one shared Playwright `APIRequestContext`. This follows the singleton pattern.
+It creates one shared Playwright `APIRequestContext` per process (Playwright worker). This follows the singleton pattern.
 
 ## Singleton
 
@@ -11,8 +11,11 @@ It creates one shared Playwright `APIRequestContext`. This follows the singleton
 Use static methods instead.
 
 ```ts
-await ApiRequestHelper.executeApiRequest<UserResponse, unknown>({
-    url: "/api/users/2",
+import type { GetProductsResponse } from "../api/productsApi/types";
+import { ApiRequestHelper } from "../helpers/apiRequestHelper";
+
+await ApiRequestHelper.executeApiRequest<GetProductsResponse, never>({
+    url: "/products",
     method: "GET",
 });
 ```
@@ -47,34 +50,90 @@ Use `executeApiRequest` to send API requests.
 Use `params` for URL query parameters. Every call to `executeApiRequest()` automatically attaches the Bearer token, including requests to public endpoints such as `/users/register`. It builds authorization headers internally; custom request headers are not exposed in `ExecuteApiRequestParams`. A `204 No Content` response returns `undefined`; use `void` as the response type. Other successful responses are parsed as JSON.
 
 ```ts
-const user = await ApiRequestHelper.executeApiRequest<UserResponse, unknown>({
-    url: "/api/users/2",
+import type { SearchUserResponse } from "../api/userApi/types";
+
+const users = await ApiRequestHelper.executeApiRequest<SearchUserResponse, never>({
+    url: "/users/search",
     method: "GET",
+    params: { q: "Jane", page: 1 },
 });
 ```
 
 For requests with body, pass the request type and response type.
 
 ```ts
-const user = await ApiRequestHelper.executeApiRequest<CreateUserResponse, CreateUserRequest>({
-    url: "/api/users",
+import type { RegisterUserRequest, RegisterUserResponse } from "../api/userApi/types";
+import { getRegisterUserRequest } from "../helpers/requestHelper";
+
+const user = await ApiRequestHelper.executeApiRequest<RegisterUserResponse, RegisterUserRequest>({
+    url: "/users/register",
     method: "POST",
-    body: {
-        name: "John",
-        job: "QA",
-    },
+    body: getRegisterUserRequest(),
 });
 ```
 
+These are excerpts from an async test or setup function. Record `user.id` for deletion during teardown when registering test users. Specs normally call the typed API clients through `ApiFactory`; the snippets above illustrate the transport helper itself.
+
 ## Authentication
 
-`getApiToken(): Promise<string>` reads `API_EMAIL` and `API_PASSWORD` from the process environment, sends `POST /users/login`, validates `access_token`, and returns it. The token request is cached, so concurrent and subsequent calls reuse it. Failed token requests are removed from the cache so a later call can retry.
+`getApiToken()` reads `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD`
+and delegates login to `getUserApiToken()`. It caches the admin
+token request, including concurrent calls. Failed requests are
+removed from the cache so a later call can retry.
 
-Every call to `executeApiRequest()` awaits `getApiToken()` and adds `Authorization: Bearer <token>`. Missing credentials or failed authentication prevent the requested operation from being sent, including registration. To obtain the initial token without recursion, `getApiToken()` sends its login request directly through `APIRequestContext.post()`, without calling `executeApiRequest()` or adding a Bearer header. It logs the login response and checks HTTP status, JSON parsing, and token validity before caching the result.
+`getUserApiToken(body: LoginUserRequest)` sends `POST /users/login`
+with the supplied email and password. It validates the response
+and returns `access_token`. This method does not cache its result
+or replace the cached admin token.
 
-`getApiToken()` manages the cached token request and clears it on failure. The private async method `requestApiToken()` performs the login with `try/catch`, using `LoginUserRequest` and `LoginUserResponse` from `api/userApi/types.ts`. `UserApi` does not expose a login method. `executeApiRequest()` builds the authorization header directly. `clearAccessToken()` clears the cached token without closing the context. `dispose()` also clears it; the next authenticated request obtains a new token. The singleton holds one token per process, shared by API clients in that process. Clear the cache after changing credentials or when the token expires; automatic refresh is not implemented.
+Login requests use `APIRequestContext.post()` directly, without
+a Bearer header. Both methods use the shared request context.
+
+`executeApiRequest()` always uses the cached admin token.
+Calling `getUserApiToken()` does not change the account used
+by subsequent API client requests.
+
+`clearAccessToken()` clears the admin token cache. `dispose()`
+also closes the shared request context. Automatic token refresh
+is not implemented.
+
+## Browser authentication
+
+`getUserStorageState()` from `helpers/authHelper.ts` obtains
+a token for the supplied credentials and builds browser storage
+state with `localStorage["auth-token"]`.
+
+The origin comes from the selected environment's `baseURL`.
+Use `TEST_ENV=prod` for `https://practicesoftwaretesting.com/`.
+
+```ts
+import { getUserStorageState } from "../helpers/authHelper";
+import { getEnvironment } from "../config/env";
+
+// email and password belong to the user being tested.
+const storageState = await getUserStorageState({ email, password });
+const context = await browser.newContext({ storageState });
+const page = await context.newPage();
+
+await page.goto(getEnvironment().baseURL);
+```
+
+Storage state stays in memory. Close the browser context and call
+`ApiRequestHelper.dispose()` during test teardown.
 
 ## Error Handling
+
+Negative tests assert a rejected promise. Include the method, URL, and status in the expected message so a login failure or a different request error does not satisfy the assertion:
+
+```ts
+await expect(userApi.register({
+    ...getRegisterUserRequest(),
+    email: " ",
+    password: " ",
+}),
+    "Registration with blank email and password should fail with status 422")
+    .rejects.toThrow("Method: POST. URL: /users/register. Status: 422.");
+```
 
 If the API response is not successful, the helper throws an error with:
 
@@ -92,8 +151,8 @@ The helper logs the request method and URL. Immediately after receiving a respon
 | Event | Level | Message |
 | --- | --- | --- |
 | Request starts | `info` | `API request started` |
-| Successful HTTP response | `info` | `Response (GET /api/users/2): 200 OK` |
-| Unsuccessful HTTP response, including 4xx and 5xx | `error` | `Response ERROR (GET /api/users/2): 404 Not Found - URL: ...` |
+| Successful HTTP response | `info` | `Response (GET /products): 200 OK` |
+| Unsuccessful HTTP response, including 4xx and 5xx | `error` | `Response ERROR (GET /products/missing-id): 404 Not Found - URL: ...` |
 | Unsuccessful response body, when readable | `error` | `Error Body: ...` |
 | Context creation, network, or JSON parsing error | `error` | `API request failed` |
 
@@ -101,10 +160,11 @@ The response logging method starts an asynchronous read of unsuccessful response
 
 ```ts
 import { ApiRequestHelper } from "../helpers/apiRequestHelper";
+import type { GetProductsResponse } from "../api/productsApi/types";
 
 try {
-    const user = await ApiRequestHelper.executeApiRequest<{ id: number }, unknown>({
-        url: "/api/users/2",
+    const products = await ApiRequestHelper.executeApiRequest<GetProductsResponse, never>({
+        url: "/products",
         method: "GET",
     });
     // The helper has already logged the request and its outcome.

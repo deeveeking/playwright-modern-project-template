@@ -2,7 +2,9 @@
 
 This folder explains the current project structure and main settings.
 
-The project is a Playwright test boilerplate for API and UI tests. It also has folders for visual, accessibility, and performance tests.
+The project demonstrates Playwright framework architecture. Its implemented coverage consists of seven API smoke tests and seven API regression tests for users, products, and categories. UI, visual, accessibility, and performance folders provide structure for future tests.
+
+Start with [API smoke commands](./commands.md#api-smoke-tests), [API regression commands](./commands.md#api-regression-tests), and [environment setup](./environment-config.md#current-environment). Product suites reuse existing category, brand, and image references while creating their own products.
 
 ## Documentation Files
 
@@ -13,6 +15,7 @@ The project is a Playwright test boilerplate for API and UI tests. It also has f
 - [Commands](./commands.md)
 - [CI](./ci.md)
 - [API Request Helper](./api-request-helper.md)
+- [Browser Authentication Helper](./api-request-helper.md#browser-authentication)
 - [User API](./user-api.md)
 - [Products API and API Factory](./products-api.md)
 - [Category API](./category-api.md)

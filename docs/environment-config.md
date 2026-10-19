@@ -64,13 +64,13 @@ The local `.env` contains three variables:
 
 ```dotenv
 TEST_ENV=dev
-API_EMAIL=
-API_PASSWORD=
+API_ADMIN_EMAIL=
+API_ADMIN_PASSWORD=
 ```
 
 This file demonstrates one configuration approach and is excluded by `.gitignore`. Fill in credentials locally only if needed. Prefer storing secrets in Vault or another secrets manager, with secret references for each environment. CI or runtime setup should resolve those references and inject the values through environment variables. Use `.env` only as a fallback, after excluding it from Git; the framework does not resolve Vault references itself.
 
-`API_EMAIL` and `API_PASSWORD` are read by `ApiRequestHelper` when it needs a token. They must identify an existing account for the selected API environment. Leaving them empty allows configuration to load, but API requests through the helper will fail with a missing-credentials error. Adding these values as fields in `dev.ts`, `stage.ts`, or `prod.ts` does not populate `process.env`.
+`API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are read by `ApiRequestHelper.getApiToken()` for ordinary API client requests. They must identify an existing admin account for the selected API environment. Leaving them empty allows configuration to load, but these requests fail with a missing-credentials error. `getUserApiToken({ email, password })` and `getUserStorageState({ email, password })` use the explicitly supplied credentials instead. Adding credential fields to `dev.ts`, `stage.ts`, or `prod.ts` does not populate `process.env`.
 
 The current environment is read from `process.env.TEST_ENV`.
 
@@ -96,15 +96,19 @@ const env = getEnvironment();
 
 | Environment | `baseURL` |
 | --- | --- |
-| `dev` | `https://www.dev.automationexercise.com/` |
-| `stage` | `https://www.stage.automationexercise.com/` |
-| `prod` | `https://www.automationexercise.com/` |
+| `dev` | `https://dev.practicesoftwaretesting.com/` |
+| `stage` | `https://stage.practicesoftwaretesting.com/` |
+| `prod` | `https://practicesoftwaretesting.com/` |
 
-The stage `baseURL` is an invalid test URL used as a placeholder.
+The dev and stage UI URLs are fake URLs for illustration only. Use prod for the public Practice Software Testing UI.
 
 | Environment | `baseApiURL` | `timeout` | `retries` | `projects` |
 | --- | --- | --- | --- | --- |
 | `dev` | `http://localhost:8091` | `middleWaitTimeout` | `0` | `chromium` |
 | `stage` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari` |
-| `prod` | `https://api.practicesoftwaretesting.com` | `0` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
+| `prod` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
+
+Stage and prod currently use the same API, so they do not isolate server data from each other. The local dev API must be started separately.
+
+Product relation IDs are not stored in environment configs. Product specs obtain current category, brand, and image IDs through `ProductsApi.getAll()` and `getById()` and pass them to `getCreateProductRequest()`.
 

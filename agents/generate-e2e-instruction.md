@@ -4,9 +4,9 @@
 
 ### Location and naming
 
-- Place API tests in `tests/api/`; place smoke tests in `tests/api/smoke/`.
-- Name spec files after the API being tested, for example `userApi.spec.ts`.
-- Group related tests with `test.describe`, for example `User API Smoke Tests`.
+- Place API tests in `tests/api/`; place smoke specs directly in `tests/api/smoke/` and regression specs directly in `tests/api/regression/`. Do not add an `admin` subfolder.
+- Name spec files after the API being tested, for example `adminUserApi.spec.ts`.
+- Group related tests with `test.describe`, for example `Admin User API Smoke Tests`.
 - Write test titles in English and describe the expected behavior and conditions. Preserve titles explicitly supplied by the user.
 - Use TypeScript, four-space indentation, double quotes, and semicolons, following the existing API tests.
 - Import `test` and `expect` from `@playwright/test`. Use `import type` for type-only imports.
@@ -30,6 +30,9 @@
 - Generate payloads through functions exported from `helpers/requestHelper.ts`, such as `getRegisterUserRequest()`.
 - Keep this helper as a module of `export const` functions, not a class.
 - Give each generator an explicit request interface return type, such as `RegisterUserRequest`.
+- For products, use `getCreateProductRequest(categoryId, brandId, productImageId)`. Obtain these IDs from an existing product in the selected environment through `ProductsApi.getAll()` and `getById()`; do not hardcode or randomly generate foreign keys.
+- Product setup reuses existing relation data to keep this architecture example simple. Preparing related data before each test is an alternative. Follow the current setup without a separate `products.data.length` assertion.
+- For categories, use `getCreateCategoryRequest()`. It creates a root category payload with a random name, unique slug, and `parent_id: null`, without relying on existing catalog data.
 - Use `@faker-js/faker` for random test data. Generate fresh data for each independent scenario.
 - Preserve API constraints when generating data: field lengths, formats, age limits, password rules, and uniqueness requirements.
 - Registration emails use a UUID and the `example.com` domain to reduce collisions.
@@ -44,7 +47,8 @@
 - API clients live under `api/` and delegate HTTP requests to `ApiRequestHelper`. Reuse existing methods and models before adding new ones.
 - Accept a single resource ID as a string, for example `userApi.delete(userId)` or `productsApi.getById(productId)`. Do not create a request interface solely to wrap an ID. Put the ID in the URL when the endpoint defines a path parameter; retain request interfaces for object payloads and query parameters.
 - Do not duplicate HTTP transport, authorization, or response logging in the spec.
-- `ApiRequestHelper.getApiToken()` obtains credentials from `API_EMAIL` and `API_PASSWORD`, performs login, and caches the token, including an in-progress login request.
+- `ApiRequestHelper.getApiToken()` obtains credentials from `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD`, performs login, and caches the token, including an in-progress login request.
+- `getUserApiToken({ email, password })` performs an uncached login for explicit credentials. It does not switch the admin account used by API clients. `helpers/authHelper.ts` prepares browser storage state through `getUserStorageState()`; keep browser authentication separate from these admin API suites.
 - Ordinary helper requests always attach the cached Bearer token, including registration. The credentials must therefore belong to an existing account in the selected environment.
 - Keep login in the request helper; do not add a `UserApi.login` method, an `authenticated` flag, or custom authorization headers to tests.
 - Use `TEST_ENV` and the existing environment configuration for API URLs. Do not hardcode credentials or base URLs in specs. Prefer credentials injected from a secret manager; local `.env` files must be excluded from Git.
@@ -73,7 +77,7 @@
 
 ### Registration test example
 
-This excerpt follows the setup, cleanup, and registration case in [the current smoke spec](../tests/api/smoke/userApi.spec.ts). That file also contains the independent email update and deletion cases.
+This excerpt follows the setup, cleanup, and registration case in [the current smoke spec](../tests/api/smoke/adminUserApi.spec.ts). That file also contains the independent email update and deletion cases.
 
 ```ts
 import { expect, test } from "@playwright/test";
@@ -82,7 +86,7 @@ import type { UserApi } from "../../../api/userApi/userApi";
 import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
 import { getRegisterUserRequest, getSearchUserRequest } from "../../../helpers/requestHelper";
 
-test.describe("User API Smoke Tests", () => {
+test.describe("Admin User API Smoke Tests", () => {
     let userApi: UserApi;
     let createdUserIds: string[] = [];
 
@@ -95,7 +99,7 @@ test.describe("User API Smoke Tests", () => {
         await ApiRequestHelper.dispose();
     });
 
-    test("User is registered successfuly with correct data", async () => {
+    test("Admin is register user successfuly with correct data", async () => {
         const request = getRegisterUserRequest();
 
         const expectedResponse = {
@@ -107,11 +111,16 @@ test.describe("User API Smoke Tests", () => {
             phone: request.phone,
             dob: request.dob,
             created_at: expect.any(String),
+            enabled: null,
+            failed_login_attempts: null,
+            role: "user",
         };
         const expectedGetUserResponse = {
             ...expectedResponse,
             provider: null,
             totp_enabled: false,
+            failed_login_attempts: 0,
+            enabled: true,
         };
 
         const response = await userApi.register(request);
@@ -129,12 +138,28 @@ test.describe("User API Smoke Tests", () => {
 });
 ```
 
+### Regression scenarios
+
+- Keep the three regression specs directly in `tests/api/regression/`, mirroring the smoke filenames.
+- The registration case uses `email: " "` and `password: " "` together and expects 422. Do not describe it as omitted fields or independent validation of each field. The previous malformed-email case was replaced because the server accepted that input.
+- The user update case creates a valid user, sends a 257-character email, expects 422, then searches by the original email and selects the user by ID to verify that the email was preserved.
+- The user search case creates and deletes its own user, then checks `data: []` and `total: 0`. Do not add a repeated-user-deletion case.
+- Product and category cases cover an empty name (422) and retrieval of a resource created and deleted within the same test (404).
+- Use `await expect(promise, "message").rejects.toThrow(...)` for HTTP errors, checking the target method, URL, and status. Do not accept any rejection without identifying the expected request failure.
+- Do not add `.then()` cleanup to invalid creation cases. They expect no resource to be created. Record the user from the invalid-update case for `afterAll`; the deleted-user search case deletes its own user without adding it to the cleanup set.
+- Product and category retrieval cases track their created IDs and remove them from the set after successful deletion. Their `afterAll` hooks delete remaining recorded resources and dispose the request context, without `try/catch/finally`.
+
 ### Validation and execution
+
+- The product example is [adminProducts.spec.ts](../tests/api/smoke/adminProducts.spec.ts). Its create and get-by-ID cases create separate products and compare complete responses with `toEqual()`. Creation includes the brand slug, while the detail response includes `specs`; expectations must respect these endpoint differences.
+- Record created product IDs before assertions. Delete them with `Promise.all` in `afterAll`, then call `ApiRequestHelper.dispose()`, following the user API spec. Keep this hook without `try/catch/finally`. Do not delete the existing product used for reference data.
+- The category example is [adminCategory.spec.ts](../tests/api/smoke/adminCategory.spec.ts). Create a separate category for each case and compare complete responses. Retrieval by ID includes `sub_categories: []` for a newly created root category. Record IDs before assertions and delete them through `CategoryApi.delete()` in `afterAll` using the same cleanup pattern as products.
 
 - API tests run in the `api` Playwright project. Keep them excluded from browser projects.
 - Do not request `page`, `browser`, or browser `context` fixtures in API-only tests.
 - Check test discovery and imports with `npx playwright test --project=api --list --reporter=list`.
 - Run API smoke tests with `npx playwright test tests/api/smoke --project=api` using the configured environment and credentials.
+- Run API regression tests with `npx playwright test tests/api/regression --project=api` using the configured environment and credentials.
 - Report validation accurately: listing tests does not execute requests or prove that the API assertions pass.
 
 ## UI

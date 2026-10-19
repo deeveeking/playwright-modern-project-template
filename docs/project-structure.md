@@ -8,7 +8,8 @@ This project has a simple structure for a modern Playwright test framework.
 | --- | --- |
 | `api/` | Place for API clients, API helpers, and request logic. |
 | `agents/` | Test generation instructions in `generate-e2e-instruction.md`; currently covers API tests. |
-| `helpers/` | Shared helpers, including `ApiRequestHelper`, `getRegisterUserRequest` and `getSearchUserRequest` in `requestHelper.ts` for building request data, and the Pino loggers in `loggerHelper.ts`. |
+| `helpers/` | Shared helpers, including `ApiRequestHelper`, request generators (`getRegisterUserRequest`, `getSearchUserRequest`, `getCreateProductRequest`, `getCreateCategoryRequest`) in `requestHelper.ts`, and the Pino loggers in `loggerHelper.ts`. |
+| `helpers/authHelper.ts` | `getUserStorageState()` prepares in-memory browser storage state with a user token in `localStorage["auth-token"]`. |
 | `helpers/types/` | Place for helper-related types. |
 | `pages/` | Place for page objects used by UI tests. |
 | `config/` | Place for environment config and config types. |
@@ -22,11 +23,14 @@ This project has a simple structure for a modern Playwright test framework.
 | Path | Purpose |
 | --- | --- |
 | `tests/api/` | API tests. |
-| `tests/api/smoke/` | API smoke tests; `userApi.spec.ts` covers registration, email update, and deletion. |
-| `tests/ui/` | UI tests. |
+| `tests/api/regression/` | Seven regression tests across user, product, and category API specs. |
+| `tests/api/smoke/` | Smoke tests: `adminUserApi.spec.ts` covers registration, email update, and deletion; `adminProducts.spec.ts` and `adminCategory.spec.ts` cover creation and retrieval by ID for products and categories. |
+| `tests/ui/` | UI test structure; no implemented UI specs yet. |
 | `tests/visual/` | Visual tests and visual checks. |
 | `tests/accessibility/` | Accessibility tests. |
 | `tests/performance/` | Performance tests. |
+
+The six implemented API specs sit directly under `smoke/` and `regression/`; there is no `admin/` subfolder. Their filenames retain the `admin` prefix because the suites use admin credentials. There are seven tests in each suite.
 
 ## Placeholder Files
 

@@ -8,6 +8,7 @@ The interfaces in `api/categoryApi/types.ts` follow the [Category Swagger docume
 | --- | --- | --- | --- |
 | `create(body)` | `POST /categories` | `CreateCategoryRequest` JSON body | `CreateCategoryResponse` |
 | `getById(categoryId)` | `GET /categories/tree/{categoryId}` | String ID in the path | `GetCategoryResponse`, including `sub_categories` |
+| `delete(categoryId)` | `DELETE /categories/{categoryId}` | String ID in the path | `DeleteCategoryResponse` (`void`, HTTP 204) |
 
 The documented GET-by-ID route contains `/tree/` and returns the category with its subcategories. The ID is URL-encoded before sending the request.
 
@@ -33,4 +34,19 @@ try {
 }
 ```
 
-Set `API_EMAIL` and `API_PASSWORD` for an existing account in the selected environment. The helper adds a Bearer token to both requests. Unsuccessful responses throw; the interfaces describe successful results and do not validate JSON at runtime.
+Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` for an existing admin account in the selected environment. Deletion requires the admin role. The helper adds a Bearer token to every request. Unsuccessful responses throw; the interfaces describe successful results and do not validate JSON at runtime.
+
+## Smoke tests
+
+[adminCategory.spec.ts](../tests/api/smoke/adminCategory.spec.ts) covers creation and retrieval by ID. Each test creates its own root category using `getCreateCategoryRequest()` from `helpers/requestHelper.ts`, with random name and slug and `parent_id: null`. No existing catalog data is required.
+
+Both tests compare the complete response with `expectedResponse` using `toEqual()`. Creation checks a server-generated string ID; retrieval checks the created ID and an empty `sub_categories` array. IDs are recorded before assertions. `afterAll` deletes the recorded categories with `Promise.all`, then disposes the request context after successful cleanup.
+
+## Regression tests
+
+[adminCategory.spec.ts](../tests/api/regression/adminCategory.spec.ts) contains two independent cases:
+
+- Creating a category with `name: ""` expects status 422.
+- Retrieving a category after creating and deleting it expects status 404.
+
+Both use `.rejects.toThrow()` with the method, URL, and status. The retrieval case records its category ID for cleanup and removes it from the set after successful deletion. `afterAll` deletes any IDs still recorded, then disposes the request context. The invalid creation case expects no category to be created and does not register an ID for cleanup.

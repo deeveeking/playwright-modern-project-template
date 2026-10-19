@@ -2,7 +2,7 @@ import { middleWaitTimeout } from "../../constants/default";
 import { Environment } from "../types/types";
 
 export const prodConfig: Environment = {
-    baseURL: "https://www.automationexercise.com/",
+    baseURL: "https://practicesoftwaretesting.com/",
     baseApiURL: "https://api.practicesoftwaretesting.com",
     timeout: middleWaitTimeout,
     retries: 0,

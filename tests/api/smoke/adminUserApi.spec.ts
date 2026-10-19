@@ -5,7 +5,7 @@ import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
 import { getRegisterUserRequest, getSearchUserRequest } from "../../../helpers/requestHelper";
 import type { UpdateUserRequest } from "../../../api/userApi/types";
 
-test.describe("User API Smoke Tests", () => {
+test.describe("Admin User API Smoke Tests", () => {
     let userApi: UserApi;
     let createdUserIds: string[] = [];
 
@@ -18,7 +18,7 @@ test.describe("User API Smoke Tests", () => {
         await ApiRequestHelper.dispose();
     });
 
-    test("User is registered successfuly with correct data", async () => {
+    test("Admin is register user successfuly with correct data", async () => {
         const request = getRegisterUserRequest();
 
         const expectedResponse = {
@@ -55,7 +55,7 @@ test.describe("User API Smoke Tests", () => {
             .toEqual(expectedGetUserResponse);
     });
     
-    test("User email is updated successfully with correct data", async () => {
+    test("Admin is update user email successfuly with correct data", async () => {
         const request = getRegisterUserRequest();
         const registeredUser = await userApi.register(request);
         createdUserIds.push(registeredUser.id);
@@ -79,7 +79,8 @@ test.describe("User API Smoke Tests", () => {
             "Updated user was not found or the email was not saved")
             .toEqual(updateRequest.email);
     });
-    test("User is deleted successfully", async () => {
+    
+    test("Admin is delete user successfuly", async () => {
         const request = getRegisterUserRequest();
         const registeredUser = await userApi.register(request);
 
