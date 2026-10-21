@@ -61,7 +61,7 @@ const response = await userApi.register(request);
 
 ## Registration Smoke Test
 
-The spec lives in [`tests/api/smoke/adminUserApi.spec.ts`](../tests/api/smoke/adminUserApi.spec.ts). It initializes `userApi` through `ApiFactory.userApi` in `beforeAll`, generates a fresh request, and registers a user. It builds `expectedResponse` from the submitted fields, excludes the password, and checks `id` and `created_at` with `expect.any(String)`. These two checks accept empty strings and do not validate the timestamp format.
+The spec lives in [`tests/api/smoke/adminUserApi.spec.ts`](../tests/api/smoke/adminUserApi.spec.ts). It imports `test` and `expect` from `fixtures/apiFixture.ts`, receives the existing `UserApi` through the worker-scoped `userApi` fixture, generates a fresh request, and registers a user. It builds `expectedResponse` from the submitted fields, excludes the password, and checks `id` and `created_at` with `expect.any(String)`. These two checks accept empty strings and do not validate the timestamp format.
 
 The registration expectation includes `enabled: null`, `failed_login_attempts: null`, and `role: "user"`. The test also searches by the registered user's first and last name and compares `data[0]` with `expectedGetUserResponse`, which adds `provider: null` and `totp_enabled: false` and overrides `enabled` to `true` and `failed_login_attempts` to `0`. The current smoke registration and update tests use the first result on the first page; they do not select by ID or follow pagination.
 
@@ -75,7 +75,7 @@ expect(response,
 
 Unexpected JSON fields cause this comparison to fail. The actual response type is inferred from `UserApi.register`; the expected object also uses type inference because its matchers are not response string values.
 
-Registration and update tests add their created user IDs to `createdUserIds`. In `afterAll`, the suite deletes these users with `Promise.all`, then calls `ApiRequestHelper.dispose()` to release the context and token. If a deletion rejects, this sequential teardown does not reach `dispose()`. All three tests therefore require admin credentials, including registration because of its cleanup.
+Registration and update tests add their created user IDs to `createdUserIds`. In `afterAll`, the suite receives `userApi` from the fixture and deletes these users with `Promise.all`. The shared `_apiLifecycle` fixture calls `ApiRequestHelper.dispose()` once at worker teardown, including when a deletion fails. All three tests require admin credentials, including registration because of its cleanup. See [Test Fixtures](./fixtures.md) for the shared API fixture and separate UI user lifecycle.
 
 See [Commands](./commands.md#api-smoke-tests) for execution and [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) for the full API test conventions.
 
@@ -97,6 +97,6 @@ For this test, `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` must identify an admin
 - Updating a newly created user with a 257-character email expects status 422. The test then searches by the original email, selects the user by ID, and verifies that the email is unchanged.
 - Searching for a user after creating and deleting it expects an empty `data` array and `total: 0`.
 
-The first two cases use `.rejects.toThrow()` with the target method, URL, and status. Only the user from the update case is recorded for deletion in `afterAll`. The search case deletes its own user without adding it to the cleanup set. There is no repeated-deletion test.
+The first two cases use `.rejects.toThrow()` with the target method, URL, and status. The spec imports the same API fixture as the smoke spec. Only the user from the update case is recorded for deletion in `afterAll`. The search case deletes its own user without adding it to the cleanup set. There is no repeated-deletion test.
 
 See [API Regression Tests](./commands.md#api-regression-tests) for the run command. These assertions describe expected behavior; successful discovery alone does not validate the API responses.

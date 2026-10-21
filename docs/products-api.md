@@ -77,13 +77,13 @@ try {
 - `Admin is create product successfuly with correct data` generates a request, creates a product, and compares the complete creation response with `expectedResponse` using `toEqual()`.
 - `Admin is get product by id successfuly` creates a separate product, retrieves it by ID, and compares the exact ID, submitted fields, related objects, and empty `specs` array with its expected response.
 
-`beforeAll` creates the client through `ApiFactory.productsApi`, reads the first product page, and retrieves an existing product for valid category, brand, and image references. The selected environment must already contain a product with these relations. Reference products are read only and never scheduled for deletion.
+Both product specs import `test` and `expect` from `fixtures/apiFixture.ts`. The worker-scoped `productsApi` fixture creates the existing client through `ApiFactory.productsApi`. `beforeAll({ productsApi })` reads the first product page and retrieves an existing product for valid category, brand, and image references. The selected environment must already contain a product with these relations. Reference products are read only and never scheduled for deletion.
 
 Reusing reference data keeps this architecture example simple. Related data could instead be prepared before each test. The generator requires the three IDs as arguments; they are not hardcoded or read from environment configs. Setup directly accesses `products.data[0]` without a separate list-length assertion.
 
 `getCreateProductRequest(categoryId, brandId, productImageId)` in `helpers/requestHelper.ts` uses Faker for a name with a UUID, description, positive two-decimal price, booleans, CO2 rating, and positive stock quantity. Existing relation IDs are passed in rather than randomly generated. The tests derive `is_eco_friendly` from rating A or B and expect admin `in_stock` to equal the submitted stock.
 
-Each test records its created product ID before asserting the response. `afterAll` deletes the recorded products with `Promise.all`, then disposes the context. If a deletion rejects, the hook fails before reaching `dispose()`.
+Each test records its created product ID before asserting the response. `afterAll({ productsApi })` deletes the recorded products with `Promise.all`. The shared `_apiLifecycle` fixture disposes the HTTP context at worker teardown, including when server-data cleanup fails. Specs do not call `dispose()` themselves. See [Test Fixtures](./fixtures.md).
 
 ```bash
 npx playwright test tests/api/smoke/adminProducts.spec.ts --project=api
@@ -96,4 +96,4 @@ npx playwright test tests/api/smoke/adminProducts.spec.ts --project=api
 - Creating a product with `name: ""` expects status 422; the rest of the request is generated with valid relation IDs.
 - Retrieving a deleted product expects status 404. This test creates and deletes its own product before requesting its ID.
 
-Errors are checked with `.rejects.toThrow()` including the method, URL, and status. The retrieval case adds its product ID to a cleanup set and removes it after successful deletion. `afterAll` deletes any remaining recorded products, then disposes the request context. The invalid creation case does not track IDs because the request is expected to fail.
+Errors are checked with `.rejects.toThrow()` including the method, URL, and status. The retrieval case adds its product ID to a cleanup set and removes it after successful deletion. `afterAll({ productsApi })` deletes any remaining recorded products; the shared fixture owns request-context disposal. The invalid creation case does not track IDs because the request is expected to fail.

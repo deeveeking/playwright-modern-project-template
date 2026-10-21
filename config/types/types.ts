@@ -10,6 +10,7 @@ export type EnvironmentProject =
 export interface Environment {
     baseURL: string;
     baseApiURL: string;
+    headless: boolean;
     timeout: number;
     retries: number;
     projects: readonly EnvironmentProject[];

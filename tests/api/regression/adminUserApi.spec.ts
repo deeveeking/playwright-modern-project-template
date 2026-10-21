@@ -1,29 +1,20 @@
-import { expect, test } from "@playwright/test";
-import { ApiFactory } from "../../../api/apiFactory";
-import type { UserApi } from "../../../api/userApi/userApi";
+import { expect, test } from "../../../fixtures/apiFixture";
 import type { UpdateUserRequest } from "../../../api/userApi/types";
-import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
 import {
     getRegisterUserRequest,
     getSearchUserRequest,
 } from "../../../helpers/requestHelper";
 
 test.describe("Admin User API Regression Tests", () => {
-    let userApi: UserApi;
     const createdUserIds = new Set<string>();
 
-    test.beforeAll(async () => {
-        userApi = ApiFactory.userApi;
-    });
-
-    test.afterAll(async () => {
+    test.afterAll(async ({ userApi }) => {
         await Promise.all(
             [...createdUserIds].map(id => userApi.delete(id))
         );
-        await ApiRequestHelper.dispose();
     });
 
-    test("Admin cannot register user with blank email and password", async () => {
+    test("Admin cannot register user with blank email and password", async ({ userApi }) => {
         const request = {
             ...getRegisterUserRequest(),
             email: " ",
@@ -37,7 +28,7 @@ test.describe("Admin User API Regression Tests", () => {
             );
     });
 
-    test("Admin cannot update user email exceeding 256 characters", async () => {
+    test("Admin cannot update user email exceeding 256 characters", async ({ userApi }) => {
         const request = getRegisterUserRequest();
         const user = await userApi.register(request);
         createdUserIds.add(user.id);
@@ -62,7 +53,7 @@ test.describe("Admin User API Regression Tests", () => {
             .toEqual(request.email);
     });
 
-    test("Admin search returns no results for a deleted user", async () => {
+    test("Admin search returns no results for a deleted user", async ({ userApi }) => {
         const request = getRegisterUserRequest();
         const user = await userApi.register(request);
 

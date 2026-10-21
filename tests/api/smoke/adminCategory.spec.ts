@@ -1,23 +1,14 @@
-import { expect, test } from "@playwright/test";
-import { ApiFactory } from "../../../api/apiFactory";
-import type { CategoryApi } from "../../../api/categoryApi/categoryApi";
-import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
+import { expect, test } from "../../../fixtures/apiFixture";
 import { getCreateCategoryRequest } from "../../../helpers/requestHelper";
 
 test.describe("Admin Category API Smoke Tests", () => {
-    let categoryApi: CategoryApi;
     const createdCategoryIds: string[] = [];
 
-    test.beforeAll(async () => {
-        categoryApi = ApiFactory.categoryApi;
-    });
-
-    test.afterAll(async () => {
+    test.afterAll(async ({ categoryApi }) => {
         await Promise.all(createdCategoryIds.map(id => categoryApi.delete(id)));
-        await ApiRequestHelper.dispose();
     });
 
-    test("Admin is create category successfuly with correct data", async () => {
+    test("Admin is create category successfuly with correct data", async ({ categoryApi }) => {
         const request = getCreateCategoryRequest();
         const expectedResponse = {
             id: expect.any(String),
@@ -34,7 +25,7 @@ test.describe("Admin Category API Smoke Tests", () => {
             .toEqual(expectedResponse);
     });
 
-    test("Admin is get category by id successfuly", async () => {
+    test("Admin is get category by id successfuly", async ({ categoryApi }) => {
         const request = getCreateCategoryRequest();
         const createdCategory = await categoryApi.create(request);
         createdCategoryIds.push(createdCategory.id);

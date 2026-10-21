@@ -11,6 +11,7 @@ Start with [API smoke commands](./commands.md#api-smoke-tests), [API regression 
 - [Project Structure](./project-structure.md)
 - [Environment Config](./environment-config.md)
 - [Playwright Config](./playwright-config.md)
+- [Test Fixtures](./fixtures.md)
 - [TypeScript Config](./typescript-config.md)
 - [Commands](./commands.md)
 - [CI](./ci.md)
@@ -20,5 +21,5 @@ Start with [API smoke commands](./commands.md#api-smoke-tests), [API regression 
 - [Products API and API Factory](./products-api.md)
 - [Category API](./category-api.md)
 - [Logger Helper](./logger-helper.md)
-- [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) — API rules and an example; the UI section is reserved for future instructions.
+- [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) — API rules, a registration example, and UI fixture conventions.
 

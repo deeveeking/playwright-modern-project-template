@@ -1,24 +1,15 @@
-import { expect, test } from "@playwright/test";
-import { ApiFactory } from "../../../api/apiFactory";
-import type { UserApi } from "../../../api/userApi/userApi";
-import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
+import { expect, test } from "../../../fixtures/apiFixture";
 import { getRegisterUserRequest, getSearchUserRequest } from "../../../helpers/requestHelper";
 import type { UpdateUserRequest } from "../../../api/userApi/types";
 
 test.describe("Admin User API Smoke Tests", () => {
-    let userApi: UserApi;
     let createdUserIds: string[] = [];
 
-    test.beforeAll(async () => {
-        userApi = ApiFactory.userApi;
-    });
-
-    test.afterAll(async () => {
+    test.afterAll(async ({ userApi }) => {
         await Promise.all(createdUserIds.map(async (id) => await userApi.delete(id)));
-        await ApiRequestHelper.dispose();
     });
 
-    test("Admin is register user successfuly with correct data", async () => {
+    test("Admin is register user successfuly with correct data", async ({ userApi }) => {
         const request = getRegisterUserRequest();
 
         const expectedResponse = {
@@ -55,7 +46,7 @@ test.describe("Admin User API Smoke Tests", () => {
             .toEqual(expectedGetUserResponse);
     });
     
-    test("Admin is update user email successfuly with correct data", async () => {
+    test("Admin is update user email successfuly with correct data", async ({ userApi }) => {
         const request = getRegisterUserRequest();
         const registeredUser = await userApi.register(request);
         createdUserIds.push(registeredUser.id);
@@ -80,7 +71,7 @@ test.describe("Admin User API Smoke Tests", () => {
             .toEqual(updateRequest.email);
     });
     
-    test("Admin is delete user successfuly", async () => {
+    test("Admin is delete user successfuly", async ({ userApi }) => {
         const request = getRegisterUserRequest();
         const registeredUser = await userApi.register(request);
 

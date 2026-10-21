@@ -48,7 +48,7 @@ Run only the product API spec:
 npx playwright test tests/api/smoke/adminProducts.spec.ts --project=api
 ```
 
-The product spec covers creation and retrieval by ID. It requires admin credentials and existing catalog data for category, brand, and image references. Each test creates a separate product; teardown deletes the recorded products with `Promise.all`, then disposes the request context after successful cleanup.
+The product spec covers creation and retrieval by ID. It requires admin credentials and existing catalog data for category, brand, and image references. Each test creates a separate product; `afterAll({ productsApi })` deletes the recorded products with `Promise.all`. The shared API fixture disposes the request context at worker teardown.
 
 Run only the category API spec:
 
@@ -56,7 +56,7 @@ Run only the category API spec:
 npx playwright test tests/api/smoke/adminCategory.spec.ts --project=api
 ```
 
-The category spec covers creation and retrieval by ID. Each test creates its own root category; teardown deletes the recorded categories before disposing the request context. Admin credentials are required for cleanup.
+The category spec covers creation and retrieval by ID. Each test creates its own root category; `afterAll({ categoryApi })` deletes the recorded categories, and the shared API fixture disposes the request context at worker teardown. Admin credentials are required for cleanup.
 
 Check test discovery and imports without sending API requests:
 
@@ -64,7 +64,7 @@ Check test discovery and imports without sending API requests:
 npx playwright test --project=api --list --reporter=list
 ```
 
-The user API smoke spec contains three cases: registration, email update, and deletion. Each creates its own user. Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` to an admin account: update and deletion need it, and registration also deletes its test data during teardown. `afterAll` deletes IDs recorded by the registration and update tests, then disposes the request context. The deletion case removes its own user within the test.
+The user API smoke spec contains three cases: registration, email update, and deletion. Each creates its own user. Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` to an admin account: update and deletion need it, and registration also deletes its test data during teardown. `afterAll` receives `userApi` from the shared fixture and deletes IDs recorded by the registration and update tests. The deletion case removes its own user within the test. The API fixture disposes the request context at worker teardown; see [Test Fixtures](./fixtures.md).
 
 ## API Regression Tests
 

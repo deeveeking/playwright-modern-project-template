@@ -19,14 +19,18 @@ const environments: Record<EnvironmentName, Environment> = {
 };
 
 export const getEnvironment = (): Environment => {
-    const environmentName = process.env.TEST_ENV;
-
-    if (!environmentName) {
-        return environments.dev;
-    }
+    const environmentName = process.env.TEST_ENV || "dev";
+    const headless = process.env.HEADLESS;
 
     if (environmentName in environments) {
-        return environments[environmentName as EnvironmentName];
+        const environment = environments[environmentName as EnvironmentName];
+
+        return {
+            ...environment,
+            headless: headless
+                ? headless === "true"
+                : environment.headless,
+        };
     }
 
     throw new Error(

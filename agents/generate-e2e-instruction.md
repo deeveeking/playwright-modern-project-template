@@ -9,20 +9,20 @@
 - Group related tests with `test.describe`, for example `Admin User API Smoke Tests`.
 - Write test titles in English and describe the expected behavior and conditions. Preserve titles explicitly supplied by the user.
 - Use TypeScript, four-space indentation, double quotes, and semicolons, following the existing API tests.
-- Import `test` and `expect` from `@playwright/test`. Use `import type` for type-only imports.
+- All API specs import `test` and `expect` from `fixtures/apiFixture.ts` and request `{ userApi }`, `{ productsApi }`, or `{ categoryApi }` in tests and hooks. Use `import type` for type-only imports.
 - Keep imports relative and update them when moving a spec into another directory.
 - Generate executable tests without `test.skip` or `test.only`, unless explicitly requested.
 
 ### Setup and teardown
 
-- Declare API client variables inside `test.describe` so tests in that block can use them.
-- Initialize clients in `test.beforeAll` using the property getters on `ApiFactory`, such as `userApi = ApiFactory.userApi`.
+- The worker-scoped client fixtures create the existing clients through their `ApiFactory` getters. Do not duplicate client setup or HTTP-context disposal in spec hooks.
+- Product specs keep `beforeAll({ productsApi })` to obtain relation references. User and category specs do not need a hook solely to initialize a client.
 - Use `test.beforeAll` and `test.afterAll` for suite setup and teardown.
-- Call `await ApiRequestHelper.dispose()` in `afterAll` to release the shared request context and clear the cached token.
+- The worker-scoped `_apiLifecycle` fixture uses `auto: true` to close the shared context once after ordinary fixtures finish, including failed test-data cleanup. Do not add unused `_apiLifecycle` parameters to API client fixtures, request it directly in specs, or add `ApiRequestHelper.dispose()` to API spec hooks.
 - Each factory getter creates a new client. Do not add client caching, factory functions, enums, or a switch-based API selector when generating tests.
 - Keep tests independent: do not rely on another test creating data or on execution order. Setup hooks may run again in another worker or on retry.
 - For an update test, create a separate user in that test, copy its request data, and change only the target field. Check the update response and read the user back to verify the saved field. The current email update test searches by full name and compares `data[0].email`. Updating this new user through the shared environment account requires admin credentials.
-- Disposing the request context does not delete server data. Record the IDs created by registration and update tests in `createdUserIds`; delete them in `afterAll` before disposing the context. The deletion test deletes its own user and does not add its ID to this list. `UserApi.delete` requires an admin account, so the whole current smoke suite requires admin credentials.
+- Disposing the request context does not delete server data. Record the IDs created by registration and update tests in `createdUserIds`; delete them in `afterAll` through its `userApi` argument. The deletion test deletes its own user and does not add its ID to this list. `UserApi.delete` requires an admin account, so the whole current smoke suite requires admin credentials.
 - For a deletion test, create its user within the test and await deletion by the returned ID. The current test relies on the helper to throw for a non-success response; it does not separately assert the return value. Search by the unique email afterward and check both an empty `data` array and `total: 0`.
 
 ### Request data
@@ -80,26 +80,17 @@
 This excerpt follows the setup, cleanup, and registration case in [the current smoke spec](../tests/api/smoke/adminUserApi.spec.ts). That file also contains the independent email update and deletion cases.
 
 ```ts
-import { expect, test } from "@playwright/test";
-import { ApiFactory } from "../../../api/apiFactory";
-import type { UserApi } from "../../../api/userApi/userApi";
-import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
+import { expect, test } from "../../../fixtures/apiFixture";
 import { getRegisterUserRequest, getSearchUserRequest } from "../../../helpers/requestHelper";
 
 test.describe("Admin User API Smoke Tests", () => {
-    let userApi: UserApi;
     let createdUserIds: string[] = [];
 
-    test.beforeAll(async () => {
-        userApi = ApiFactory.userApi;
-    });
-
-    test.afterAll(async () => {
+    test.afterAll(async ({ userApi }) => {
         await Promise.all(createdUserIds.map(async (id) => await userApi.delete(id)));
-        await ApiRequestHelper.dispose();
     });
 
-    test("Admin is register user successfuly with correct data", async () => {
+    test("Admin is register user successfuly with correct data", async ({ userApi }) => {
         const request = getRegisterUserRequest();
 
         const expectedResponse = {
@@ -147,12 +138,12 @@ test.describe("Admin User API Smoke Tests", () => {
 - Product and category cases cover an empty name (422) and retrieval of a resource created and deleted within the same test (404).
 - Use `await expect(promise, "message").rejects.toThrow(...)` for HTTP errors, checking the target method, URL, and status. Do not accept any rejection without identifying the expected request failure.
 - Do not add `.then()` cleanup to invalid creation cases. They expect no resource to be created. Record the user from the invalid-update case for `afterAll`; the deleted-user search case deletes its own user without adding it to the cleanup set.
-- Product and category retrieval cases track their created IDs and remove them from the set after successful deletion. Their `afterAll` hooks delete remaining recorded resources and dispose the request context, without `try/catch/finally`.
+- Product and category retrieval cases track their created IDs and remove them from the set after successful deletion. Their `afterAll` hooks receive the matching API client and delete remaining recorded resources, without `try/catch/finally`. The shared fixture owns HTTP-context disposal.
 
 ### Validation and execution
 
 - The product example is [adminProducts.spec.ts](../tests/api/smoke/adminProducts.spec.ts). Its create and get-by-ID cases create separate products and compare complete responses with `toEqual()`. Creation includes the brand slug, while the detail response includes `specs`; expectations must respect these endpoint differences.
-- Record created product IDs before assertions. Delete them with `Promise.all` in `afterAll`, then call `ApiRequestHelper.dispose()`, following the user API spec. Keep this hook without `try/catch/finally`. Do not delete the existing product used for reference data.
+- Record created product IDs before assertions. Delete them with `Promise.all` in `afterAll({ productsApi })`. Keep this hook without `try/catch/finally`. Do not delete the existing product used for reference data. Context disposal belongs to the shared worker fixture.
 - The category example is [adminCategory.spec.ts](../tests/api/smoke/adminCategory.spec.ts). Create a separate category for each case and compare complete responses. Retrieval by ID includes `sub_categories: []` for a newly created root category. Record IDs before assertions and delete them through `CategoryApi.delete()` in `afterAll` using the same cleanup pattern as products.
 
 - API tests run in the `api` Playwright project. Keep them excluded from browser projects.
@@ -163,3 +154,12 @@ test.describe("Admin User API Smoke Tests", () => {
 - Report validation accurately: listing tests does not execute requests or prove that the API assertions pass.
 
 ## UI
+
+- Import `test` and `expect` from `fixtures/browserFixture.ts` for home-page navigation and prepared authentication. The exported test inherits `userApi` from `apiFixture.ts` and `user` from `userFixture.ts`.
+- Requesting `page` uses a fresh user by default, prepares its token through `getUserStorageState()`, creates the isolated browser context, and opens `/` using the project's `baseURL`.
+- Tests can request `user` to access its `credentials`, optional `profile`, and `cleanup()` method. Use `user.cleanup()` when intentionally deleting a fixture-created user; direct deletion through `userApi` would leave its cleanup bookkeeping unchanged.
+- Existing accounts are supplied with `test.use({ userCredentials: { email, password } })`. They are not registered or deleted; their `profile` is undefined and `cleanup()` does nothing.
+- For login and other unauthenticated tests, use `test.use({ storageState: { cookies: [], origins: [] } })` within the appropriate file or group. Do not request `user` in these tests or hooks unless account creation is explicitly needed.
+- Keep browser and page lifecycle management with Playwright. The `user` fixture deletes its created user after each test, and the automatic `_apiLifecycle` fixture disposes the shared API context at worker teardown after API clients and user fixtures finish.
+- Use `TEST_ENV=prod` for the current public UI. Dev and stage UI URLs are illustrative placeholders. Tests creating users require admin API credentials for registration and cleanup.
+- See [Test Fixtures](../docs/fixtures.md) for lifecycle details and usage examples. No UI specs have been implemented yet.
