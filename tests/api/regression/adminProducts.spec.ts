@@ -1,18 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { ApiFactory } from "../../../api/apiFactory";
-import type { ProductsApi } from "../../../api/productsApi/productsApi";
+import { expect, test } from "../../../fixtures/apiFixture";
 import type { GetProductResponse } from "../../../api/productsApi/types";
-import { ApiRequestHelper } from "../../../helpers/apiRequestHelper";
 import { getCreateProductRequest } from "../../../helpers/requestHelper";
 
 test.describe("Admin Products API Regression Tests", () => {
-    let productsApi: ProductsApi;
     let referenceProduct: GetProductResponse;
     const createdProductIds = new Set<string>();
 
-    test.beforeAll(async () => {
-        productsApi = ApiFactory.productsApi;
-
+    test.beforeAll(async ({ productsApi }) => {
         // Related test data can also be created before each test.
         // Here we reuse existing category, brand, and image records to keep
         // the framework simple, as its main purpose is to demonstrate architecture.
@@ -20,14 +14,13 @@ test.describe("Admin Products API Regression Tests", () => {
         referenceProduct = await productsApi.getById(products.data[0].id);
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ productsApi }) => {
         await Promise.all(
             [...createdProductIds].map(id => productsApi.delete(id))
         );
-        await ApiRequestHelper.dispose();
     });
 
-    test("Admin cannot create product with an empty name", async () => {
+    test("Admin cannot create product with an empty name", async ({ productsApi }) => {
         const request = {
             ...getCreateProductRequest(
                 referenceProduct.category.id,
@@ -44,7 +37,7 @@ test.describe("Admin Products API Regression Tests", () => {
             );
     });
 
-    test("Admin cannot get deleted product by id", async () => {
+    test("Admin cannot get deleted product by id", async ({ productsApi }) => {
         const request = getCreateProductRequest(
             referenceProduct.category.id,
             referenceProduct.brand.id,

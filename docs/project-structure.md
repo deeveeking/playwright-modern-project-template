@@ -7,7 +7,8 @@ This project has a simple structure for a modern Playwright test framework.
 | Path | Purpose |
 | --- | --- |
 | `api/` | Place for API clients, API helpers, and request logic. |
-| `agents/` | Test generation instructions in `generate-e2e-instruction.md`; currently covers API tests. |
+| `agents/` | API test generation instructions and UI fixture conventions in `generate-e2e-instruction.md`. |
+| `fixtures/` | Typed worker fixtures for User, Products, and Category API clients with shared HTTP-context cleanup, plus test users, authentication storage state, and home-page navigation. See [Test Fixtures](./fixtures.md). |
 | `helpers/` | Shared helpers, including `ApiRequestHelper`, request generators (`getRegisterUserRequest`, `getSearchUserRequest`, `getCreateProductRequest`, `getCreateCategoryRequest`) in `requestHelper.ts`, and the Pino loggers in `loggerHelper.ts`. |
 | `helpers/authHelper.ts` | `getUserStorageState()` prepares in-memory browser storage state with a user token in `localStorage["auth-token"]`. |
 | `helpers/types/` | Place for helper-related types. |

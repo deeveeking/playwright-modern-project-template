@@ -21,6 +21,7 @@ The `Environment` interface describes the shape of each environment config.
 export interface Environment {
     baseURL: string;
     baseApiURL: string;
+    headless: boolean;
     timeout: number;
     retries: number;
     projects: readonly EnvironmentProject[];
@@ -60,12 +61,13 @@ if (existsSync(envFilePath)) {
 
 `loadEnvFile()` reads the file into `process.env`. The `existsSync()` check avoids a missing-file error when `.env` is absent, such as in CI. Variables already supplied by the shell or CI take precedence over values from the file. Without `.env`, the project uses those process variables directly. The loader requires Node.js 20.12+.
 
-The local `.env` contains three variables:
+The local `.env` supports these variables:
 
 ```dotenv
 TEST_ENV=dev
 API_ADMIN_EMAIL=
 API_ADMIN_PASSWORD=
+HEADLESS=false
 ```
 
 This file demonstrates one configuration approach and is excluded by `.gitignore`. Fill in credentials locally only if needed. Prefer storing secrets in Vault or another secrets manager, with secret references for each environment. CI or runtime setup should resolve those references and inject the values through environment variables. Use `.env` only as a fallback, after excluding it from Git; the framework does not resolve Vault references itself.
@@ -75,12 +77,31 @@ This file demonstrates one configuration approach and is excluded by `.gitignore
 The current environment is read from `process.env.TEST_ENV`.
 
 ```ts
-const environmentName = process.env.TEST_ENV;
+const environmentName = process.env.TEST_ENV || "dev";
 ```
 
 If `TEST_ENV` is not set, the project uses `dev`.
 
 If `TEST_ENV` has an unknown value, the project throws an error.
+
+## Headless Mode
+
+Each environment config defines `headless: true` as its default. `getEnvironment()` reads `process.env.HEADLESS` after the optional `.env` has been loaded:
+
+```ts
+const headless = process.env.HEADLESS;
+
+return {
+    ...environment,
+    headless: headless
+        ? headless === "true"
+        : environment.headless,
+};
+```
+
+`HEADLESS=true` runs browsers without a window; `HEADLESS=false` opens browser windows. If the variable is missing or empty, the selected config's boolean is used. The comparison is case-sensitive: only the non-empty string `"true"` enables headless mode; other non-empty values produce `false`. There is no separate validation step.
+
+The local example uses `HEADLESS=false`. An existing shell or CI variable takes precedence over `.env`. This setting is applied to browser projects in `availableProjects`; API-only tests do not launch a browser.
 
 ## Getting Config
 

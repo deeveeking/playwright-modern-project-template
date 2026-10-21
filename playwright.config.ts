@@ -9,23 +9,23 @@ type PlaywrightProject = NonNullable<PlaywrightTestConfig['projects']>[number];
 const availableProjects: Record<EnvironmentProject, PlaywrightProject> = {
   chromium: {
     name: 'chromium',
-    use: { ...devices['Desktop Chrome'] },
+    use: { ...devices['Desktop Chrome'], headless: env.headless },
   },
   firefox: {
     name: 'firefox',
-    use: { ...devices['Desktop Firefox'] },
+    use: { ...devices['Desktop Firefox'], headless: env.headless },
   },
   webkit: {
     name: 'webkit',
-    use: { ...devices['Desktop Safari'] },
+    use: { ...devices['Desktop Safari'], headless: env.headless },
   },
   'mobile-chrome': {
     name: 'Mobile Chrome',
-    use: { ...devices['Pixel 10 Pro'] },
+    use: { ...devices['Pixel 10 Pro'], headless: env.headless },
   },
   'mobile-safari': {
     name: 'Mobile Safari',
-    use: { ...devices['iPhone 17'] },
+    use: { ...devices['iPhone 17'], headless: env.headless },
   },
 };
 

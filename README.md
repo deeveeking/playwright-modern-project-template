@@ -9,6 +9,7 @@ The implemented tests target the Practice Software Testing API. UI, visual, acce
 - Seven API smoke tests and seven API regression tests for users, products, and categories
 - A dedicated `api` Playwright project that does not request browser fixtures
 - Typed API clients accessed through `ApiFactory`
+- Separate API, user, and browser fixtures with automatic test-user cleanup
 - Faker request generators and shared API logging with Pino
 - Cached admin authentication and user-specific tokens for browser storage state
 - Environment configurations for dev, stage, and prod

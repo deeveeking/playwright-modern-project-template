@@ -40,7 +40,9 @@ Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` for an existing admin account in 
 
 [adminCategory.spec.ts](../tests/api/smoke/adminCategory.spec.ts) covers creation and retrieval by ID. Each test creates its own root category using `getCreateCategoryRequest()` from `helpers/requestHelper.ts`, with random name and slug and `parent_id: null`. No existing catalog data is required.
 
-Both tests compare the complete response with `expectedResponse` using `toEqual()`. Creation checks a server-generated string ID; retrieval checks the created ID and an empty `sub_categories` array. IDs are recorded before assertions. `afterAll` deletes the recorded categories with `Promise.all`, then disposes the request context after successful cleanup.
+Both category specs import `test` and `expect` from `fixtures/apiFixture.ts` and receive the worker-scoped `categoryApi` through tests and hooks. No `beforeAll` hook is needed to instantiate the client.
+
+Both smoke tests compare the complete response with `expectedResponse` using `toEqual()`. Creation checks a server-generated string ID; retrieval checks the created ID and an empty `sub_categories` array. IDs are recorded before assertions. `afterAll({ categoryApi })` deletes the recorded categories with `Promise.all`. The shared `_apiLifecycle` fixture disposes the request context at worker teardown, including when server-data cleanup fails. See [Test Fixtures](./fixtures.md).
 
 ## Regression tests
 
@@ -49,4 +51,4 @@ Both tests compare the complete response with `expectedResponse` using `toEqual(
 - Creating a category with `name: ""` expects status 422.
 - Retrieving a category after creating and deleting it expects status 404.
 
-Both use `.rejects.toThrow()` with the method, URL, and status. The retrieval case records its category ID for cleanup and removes it from the set after successful deletion. `afterAll` deletes any IDs still recorded, then disposes the request context. The invalid creation case expects no category to be created and does not register an ID for cleanup.
+Both use `.rejects.toThrow()` with the method, URL, and status. The retrieval case records its category ID for cleanup and removes it from the set after successful deletion. `afterAll({ categoryApi })` deletes any IDs still recorded; the shared fixture owns request-context disposal. The invalid creation case expects no category to be created and does not register an ID for cleanup.
