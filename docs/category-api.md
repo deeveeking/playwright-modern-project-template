@@ -1,6 +1,6 @@
 # Category API
 
-`api/categoryApi/categoryApi.ts` exports `CategoryApi`. Obtain a new instance through `ApiFactory.categoryApi`; the factory does not cache clients. Authorization, logging, and error handling use the shared `ApiRequestHelper`.
+`api/categoryApi/categoryApi.ts` exports `CategoryApi`. API tests receive the worker-scoped `categoryApi` client from `fixtures/apiFixture.ts`, which creates it directly with `new CategoryApi()`. Authorization, logging, and error handling use the shared `ApiRequestHelper`.
 
 The interfaces in `api/categoryApi/types.ts` follow the [Category Swagger documentation](https://api.practicesoftwaretesting.com/api/documentation#/Category).
 
@@ -15,24 +15,25 @@ The documented GET-by-ID route contains `/tree/` and returns the category with i
 The creation payload contains `name`, `slug`, and `parent_id`. `parent_id` can be `null` for a root category or the ID of an existing parent. Swagger does not mark request fields as required, so the interface leaves them optional; the server still validates the payload. Responses include `id`, `parent_id`, `name`, and `slug`; tree responses also include `sub_categories`.
 
 ```ts
-import { ApiFactory } from "../api/apiFactory";
-import { ApiRequestHelper } from "../helpers/apiRequestHelper";
-import type { CreateCategoryRequest } from "../api/categoryApi/types";
+import { test } from "../fixtures/apiFixture";
+import { getCreateCategoryRequest } from "../helpers/requestHelper";
 
-const categoryApi = ApiFactory.categoryApi;
-const payload: CreateCategoryRequest = {
-    name: "Test tools",
-    slug: `test-tools-${Date.now()}`,
-    parent_id: null,
-};
+const createdCategoryIds: string[] = [];
 
-try {
-    const created = await categoryApi.create(payload);
-    const category = await categoryApi.getById(created.id);
-} finally {
-    await ApiRequestHelper.dispose();
-}
+test.afterAll(async ({ categoryApi }) => {
+    await Promise.all(createdCategoryIds.map(id => categoryApi.delete(id)));
+});
+
+test("Create and read a category", async ({ categoryApi }) => {
+    const request = getCreateCategoryRequest();
+    const response = await categoryApi.create(request);
+    createdCategoryIds.push(response.id);
+
+    await categoryApi.getById(response.id);
+});
 ```
+
+The example illustrates client calls and server-data cleanup. The fixture disposes the shared HTTP context; full response assertions are described in the smoke and regression sections below.
 
 Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` for an existing admin account in the selected environment. Deletion requires the admin role. The helper adds a Bearer token to every request. Unsuccessful responses throw; the interfaces describe successful results and do not validate JSON at runtime.
 

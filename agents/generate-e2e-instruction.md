@@ -15,11 +15,11 @@
 
 ### Setup and teardown
 
-- The worker-scoped client fixtures create the existing clients through their `ApiFactory` getters. Do not duplicate client setup or HTTP-context disposal in spec hooks.
+- The worker-scoped client fixtures instantiate `UserApi`, `ProductsApi`, and `CategoryApi` directly in `fixtures/apiFixture.ts`. Tests receive clients through fixture parameters. Do not duplicate client setup or HTTP-context disposal in spec hooks.
 - Product specs keep `beforeAll({ productsApi })` to obtain relation references. User and category specs do not need a hook solely to initialize a client.
 - Use `test.beforeAll` and `test.afterAll` for suite setup and teardown.
 - The worker-scoped `_apiLifecycle` fixture uses `auto: true` to close the shared context once after ordinary fixtures finish, including failed test-data cleanup. Do not add unused `_apiLifecycle` parameters to API client fixtures, request it directly in specs, or add `ApiRequestHelper.dispose()` to API spec hooks.
-- Each factory getter creates a new client. Do not add client caching, factory functions, enums, or a switch-based API selector when generating tests.
+- Each requested API client is created once per worker. Keep API client creation in `fixtures/apiFixture.ts`; do not add factories, manual client caches, enums, or a switch-based API selector when generating tests.
 - Keep tests independent: do not rely on another test creating data or on execution order. Setup hooks may run again in another worker or on retry.
 - For an update test, create a separate user in that test, copy its request data, and change only the target field. Check the update response and read the user back to verify the saved field. The current email update test searches by full name and compares `data[0].email`. Updating this new user through the shared environment account requires admin credentials.
 - Disposing the request context does not delete server data. Record the IDs created by registration and update tests in `createdUserIds`; delete them in `afterAll` through its `userApi` argument. The deletion test deletes its own user and does not add its ID to this list. `UserApi.delete` requires an admin account, so the whole current smoke suite requires admin credentials.

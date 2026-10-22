@@ -18,7 +18,7 @@ Start with [API smoke commands](./commands.md#api-smoke-tests), [API regression 
 - [API Request Helper](./api-request-helper.md)
 - [Browser Authentication Helper](./api-request-helper.md#browser-authentication)
 - [User API](./user-api.md)
-- [Products API and API Factory](./products-api.md)
+- [Products API](./products-api.md)
 - [Category API](./category-api.md)
 - [Logger Helper](./logger-helper.md)
 - [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) — API rules, a registration example, and UI fixture conventions.

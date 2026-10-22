@@ -5,6 +5,9 @@ import type {
     LoginUserRequest,
     RegisterUserResponse,
 } from "../api/userApi/types";
+import type { MainPage } from "../pages/mainPage";
+import type { ProductDetailPage } from "../pages/productDetailPage";
+import type { CartPage } from "../pages/cartPage";
 
 export interface TestUser {
     credentials: LoginUserRequest;
@@ -28,4 +31,10 @@ export interface UserOptions {
 
 export interface UserFixtures {
     user: TestUser;
+}
+
+export interface PagesFixtures {
+    mainPage: MainPage;
+    productDetailPage: ProductDetailPage;
+    cartPage: CartPage;
 }

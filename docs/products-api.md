@@ -1,22 +1,14 @@
-# Products API and API Factory
+# Products API
 
-`api/apiFactory.ts` exports `ApiFactory`, which creates API clients:
+API tests receive the worker-scoped `productsApi` client from `fixtures/apiFixture.ts`, which creates it directly with `new ProductsApi()`.
 
-```ts
-import { ApiFactory } from "../api/apiFactory";
+Clients share the static `ApiRequestHelper` context and token; creating a client does not create a separate authenticated session.
 
-const userApi = ApiFactory.userApi;
-const productsApi = ApiFactory.productsApi;
-const categoryApi = ApiFactory.categoryApi;
-```
-
-Each getter access creates a new client. Clients share the static `ApiRequestHelper` context and token; creating a client does not create a separate authenticated session.
-
-The API modules export their classes so the factory can import them. Its typed static getters create instances directly with `new UserApi()`, `new ProductsApi()`, and `new CategoryApi()`. Use the getters without parentheses to obtain clients in tests. See [Category API](./category-api.md) for category methods.
+See [Test Fixtures](./fixtures.md) for client lifecycle details and [Category API](./category-api.md) for category methods.
 
 ## Product Methods
 
-`ProductsApi` is implemented in `api/productsApi/productsApi.ts` and obtained through the factory. Its request and response interfaces live in `api/productsApi/types.ts`, based on the [Product Swagger documentation](https://api.practicesoftwaretesting.com/api/documentation#/Product).
+`ProductsApi` is implemented in `api/productsApi/productsApi.ts` and provided through the `productsApi` fixture. Its request and response interfaces live in `api/productsApi/types.ts`, based on the [Product Swagger documentation](https://api.practicesoftwaretesting.com/api/documentation#/Product).
 
 | Method | HTTP request | Request parameter | Response interface |
 | --- | --- | --- | --- |
@@ -36,39 +28,37 @@ The request also supports `stock`, as implemented by the [Product model](https:/
 Set `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` as described in [Environment Config](./environment-config.md#current-environment). The helper attaches a token to every product request. Deletion requires an admin account.
 
 ```ts
-import { ApiFactory } from "../api/apiFactory";
-import { ApiRequestHelper } from "../helpers/apiRequestHelper";
-import type { CreateProductRequest } from "../api/productsApi/types";
+import { test } from "../fixtures/apiFixture";
+import { getCreateProductRequest } from "../helpers/requestHelper";
+import type { GetProductResponse } from "../api/productsApi/types";
 
-const productsApi = ApiFactory.productsApi;
-const payload: CreateProductRequest = {
-    name: "Test hammer",
-    description: "A hammer created for an API test",
-    price: 19.99,
-    category_id: "replace-with-existing-category-id",
-    brand_id: "replace-with-existing-brand-id",
-    product_image_id: "replace-with-existing-image-id",
-    is_location_offer: false,
-    is_rental: false,
-    co2_rating: "A",
-    stock: 10,
-};
+let referenceProduct: GetProductResponse;
+const createdProductIds: string[] = [];
 
-let createdProductId: string | undefined;
-try {
-    const created = await productsApi.create(payload);
-    createdProductId = created.id;
-    const product = await productsApi.getById(created.id);
-} finally {
-    try {
-        if (createdProductId) {
-            await productsApi.delete(createdProductId);
-        }
-    } finally {
-        await ApiRequestHelper.dispose();
-    }
-}
+test.beforeAll(async ({ productsApi }) => {
+    const products = await productsApi.getAll();
+    referenceProduct = await productsApi.getById(products.data[0].id);
+});
+
+test.afterAll(async ({ productsApi }) => {
+    await Promise.all(createdProductIds.map(id => productsApi.delete(id)));
+});
+
+test("Create and read a product", async ({ productsApi }) => {
+    const request = getCreateProductRequest(
+        referenceProduct.category.id,
+        referenceProduct.brand.id,
+        referenceProduct.product_image.id
+    );
+
+    const response = await productsApi.create(request);
+    createdProductIds.push(response.id);
+
+    await productsApi.getById(response.id);
+});
 ```
+
+The example illustrates client calls and server-data cleanup. The fixture disposes the shared HTTP context; full response assertions are described in the smoke and regression sections below.
 
 ## Admin Product Smoke Tests
 
@@ -77,7 +67,7 @@ try {
 - `Admin is create product successfuly with correct data` generates a request, creates a product, and compares the complete creation response with `expectedResponse` using `toEqual()`.
 - `Admin is get product by id successfuly` creates a separate product, retrieves it by ID, and compares the exact ID, submitted fields, related objects, and empty `specs` array with its expected response.
 
-Both product specs import `test` and `expect` from `fixtures/apiFixture.ts`. The worker-scoped `productsApi` fixture creates the existing client through `ApiFactory.productsApi`. `beforeAll({ productsApi })` reads the first product page and retrieves an existing product for valid category, brand, and image references. The selected environment must already contain a product with these relations. Reference products are read only and never scheduled for deletion.
+Both product specs import `test` and `expect` from `fixtures/apiFixture.ts`. The worker-scoped `productsApi` fixture creates its client directly with `new ProductsApi()`. `beforeAll({ productsApi })` reads the first product page and retrieves an existing product for valid category, brand, and image references. The selected environment must already contain a product with these relations. Reference products are read only and never scheduled for deletion.
 
 Reusing reference data keeps this architecture example simple. Related data could instead be prepared before each test. The generator requires the three IDs as arguments; they are not hardcoded or read from environment configs. Setup directly accesses `products.data[0]` without a separate list-length assertion.
 
