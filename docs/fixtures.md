@@ -11,7 +11,7 @@ The fixtures extend Playwright Test in three stages. Each module exports `test`;
 
 ## API Tests
 
-All six API smoke and regression specs import `test` and `expect` from `fixtures/apiFixture.ts`. They receive the required client through `async ({ userApi })`, `async ({ productsApi })`, or `async ({ categoryApi })` in tests and hooks. Each fixture creates the existing client through its `ApiFactory` getter; the fixture does not change its methods or authorization. Fixtures are lazy, so unused clients are not created.
+All six API smoke and regression specs import `test` and `expect` from `fixtures/apiFixture.ts`. They receive the required client through `async ({ userApi })`, `async ({ productsApi })`, or `async ({ categoryApi })` in tests and hooks. Each worker-scoped fixture creates its client directly with `new UserApi()`, `new ProductsApi()`, or `new CategoryApi()`. Authorization uses the shared `ApiRequestHelper`. Fixtures are lazy, so unused clients are not created.
 
 These specs continue to create their own request payloads and track server data for cleanup in `afterAll`. They do not need a `beforeAll` hook solely to instantiate a client, or their own `ApiRequestHelper.dispose()` call. Product specs retain `beforeAll({ productsApi })` to obtain current category, brand, and image references. User and category specs no longer need client-initialization hooks.
 

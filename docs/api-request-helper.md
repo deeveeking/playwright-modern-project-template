@@ -72,7 +72,7 @@ const user = await ApiRequestHelper.executeApiRequest<RegisterUserResponse, Regi
 });
 ```
 
-These are excerpts from an async test or setup function. Record `user.id` for deletion during teardown when registering test users. Specs normally call the typed API clients through `ApiFactory`; the snippets above illustrate the transport helper itself.
+These are excerpts from an async test or setup function. Record `user.id` for deletion during teardown when registering test users. Specs normally obtain typed API clients through `fixtures/apiFixture.ts`; the snippets above illustrate the transport helper itself.
 
 ## Authentication
 

@@ -1,6 +1,6 @@
 # User API
 
-`UserApi` is implemented and exported in `api/userApi/userApi.ts` so `ApiFactory` can create it directly. Obtain an instance through the `ApiFactory.userApi` getter. Request and response types live in `api/userApi/types.ts` and use names such as `RegisterUserRequest` and `RegisterUserResponse`.
+`UserApi` is implemented and exported in `api/userApi/userApi.ts`. API tests receive the worker-scoped `userApi` client from `fixtures/apiFixture.ts`, which creates it directly with `new UserApi()`. Request and response types live in `api/userApi/types.ts` and use names such as `RegisterUserRequest` and `RegisterUserResponse`.
 
 Routes and types follow the [User API documentation](https://api.practicesoftwaretesting.com/api/documentation#/User).
 
@@ -29,18 +29,15 @@ npx playwright test --project=api
 The current client sends updates with `PATCH /users/{userId}`. Its `UpdateUserRequest` interface extends `RegisterUserRequest`, so callers currently supply the registration fields even for a single-field update. The required fields are `first_name`, `last_name`, `email`, and `password`. Optional fields include `address`, `phone`, and `dob`. Passwords must contain at least eight characters including uppercase, lowercase, a number, and a symbol; `dob` uses `YYYY-MM-DD` and must represent an age between 18 and 75.
 
 ```ts
-import { ApiFactory } from "../api/apiFactory";
-import { ApiRequestHelper } from "../helpers/apiRequestHelper";
+import { test } from "../fixtures/apiFixture";
+import { getSearchUserRequest } from "../helpers/requestHelper";
 
-const userApi = ApiFactory.userApi;
-
-try {
-    // The helper obtains the token using API_ADMIN_EMAIL and API_ADMIN_PASSWORD.
-    const users = await userApi.search({ q: "Jane" });
-} finally {
-    await ApiRequestHelper.dispose();
-}
+test("Search users", async ({ userApi }) => {
+    await userApi.search(getSearchUserRequest("Jane"));
+});
 ```
+
+This example illustrates client usage; the smoke and regression sections below describe full response assertions. The fixture disposes the shared request context at worker teardown.
 
 All methods use `ApiRequestHelper`, including its logging and error handling. Unsuccessful HTTP responses throw; the response types describe successful calls.
 
