@@ -1,7 +1,10 @@
 import type { Page } from "@playwright/test";
 import { removeDollarSign } from "../helpers/dataHelper";
+import { HeaderComponent } from "./components/headerComponent";
 
 export class ProductDetailPage {
+    public readonly header = new HeaderComponent(this.page);
+
     private readonly productPrice =
         this.page.getByTestId("unit-price");
     private readonly productName =

@@ -26,12 +26,31 @@ This project has a simple structure for a modern Playwright test framework.
 | `tests/api/` | API tests. |
 | `tests/api/regression/` | Seven regression tests across user, product, and category API specs. |
 | `tests/api/smoke/` | Smoke tests: `adminUserApi.spec.ts` covers registration, email update, and deletion; `adminProducts.spec.ts` and `adminCategory.spec.ts` cover creation and retrieval by ID for products and categories. |
-| `tests/ui/` | UI test structure; no implemented UI specs yet. |
+| `tests/ui/` | UI tests; `smoke/loginFlow.spec.ts` covers sign-in, account-page elements, sign-out, and account access after sign-out. |
 | `tests/visual/` | Visual tests and visual checks. |
 | `tests/accessibility/` | Accessibility tests. |
 | `tests/performance/` | Performance tests. |
 
 The six implemented API specs sit directly under `smoke/` and `regression/`; there is no `admin/` subfolder. Their filenames retain the `admin` prefix because the suites use admin credentials. There are seven tests in each suite.
+
+## Page Objects and Locator Scope
+
+`page` represents the browser tab. `container` and `form` are
+descriptive names for `Locator` fields that narrow the search scope.
+
+```ts
+const container = page.locator("app-forgot-password");
+const form = container.getByTestId("forgot-password-form");
+const emailInput = form.getByTestId("email");
+```
+
+Here, Playwright finds the page component, then the form inside it,
+then the email input inside that form. All locators use the same
+browser page.
+
+Scoping helps avoid ambiguous matches when components contain
+repeated controls. Use `page.getByTestId()` directly when the selector
+is unique across the page.
 
 ## Placeholder Files
 
