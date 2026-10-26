@@ -20,7 +20,7 @@ const environments: Record<EnvironmentName, Environment> = {
 
 export const getEnvironment = (): Environment => {
     const environmentName = process.env.TEST_ENV || "dev";
-    const headless = process.env.HEADLESS;
+    const headless = process.env.CI ? "true" : process.env.HEADLESS;
 
     if (environmentName in environments) {
         const environment = environments[environmentName as EnvironmentName];
