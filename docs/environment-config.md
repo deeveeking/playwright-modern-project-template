@@ -6,9 +6,9 @@ Environment config lives in the `config/` folder.
 
 | File | Purpose |
 | --- | --- |
-| `config/env.ts` | Loads the optional root `.env` and selects the current environment config. |
-| `.env` | Optional local variables; ignored by Git. |
-| `config/types/types.ts` | Defines environment types. |
+| `config/env.ts` | Loads the optional root `.env`, selects the environment, and applies browser and headless overrides. |
+| `.env` | Optional root environment variables; currently tracked by Git. |
+| `config/types/types.ts` | Defines environment types and the supported browser project list. |
 | `config/environments/dev.ts` | Dev environment values. |
 | `config/environments/stage.ts` | Stage environment values. |
 | `config/environments/prod.ts` | Prod environment values. |
@@ -34,15 +34,19 @@ The `EnvironmentName` type defines allowed environment names.
 export type EnvironmentName = "dev" | "stage" | "prod";
 ```
 
-The `EnvironmentProject` type defines allowed Playwright projects.
+The `supportedBrowserProjects` array defines the browser projects available for runtime validation. `EnvironmentProject` is derived from this same list.
 
 ```ts
+export const supportedBrowserProjects = [
+    "chromium",
+    "firefox",
+    "webkit",
+    "mobile-chrome",
+    "mobile-safari",
+] as const;
+
 export type EnvironmentProject =
-    | "chromium"
-    | "firefox"
-    | "webkit"
-    | "mobile-chrome"
-    | "mobile-safari";
+    (typeof supportedBrowserProjects)[number];
 ```
 
 ## Current Environment
@@ -65,12 +69,13 @@ The local `.env` supports these variables:
 
 ```dotenv
 TEST_ENV=dev
+TEST_BROWSER=
 API_ADMIN_EMAIL=
 API_ADMIN_PASSWORD=
 HEADLESS=false
 ```
 
-This file demonstrates one configuration approach and is excluded by `.gitignore`. Fill in credentials locally only if needed. Prefer storing secrets in Vault or another secrets manager, with secret references for each environment. CI or runtime setup should resolve those references and inject the values through environment variables. Use `.env` only as a fallback, after excluding it from Git; the framework does not resolve Vault references itself.
+This file demonstrates one configuration approach and is currently tracked by Git. Keep private credentials in process environment variables or a secrets manager such as Vault, with secret references for each environment. CI or runtime setup should resolve those references and inject the values through environment variables. The framework does not resolve Vault references itself.
 
 `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are read by `ApiRequestHelper.getApiToken()` for ordinary API client requests. They must identify an existing admin account for the selected API environment. Leaving them empty allows configuration to load, but these requests fail with a missing-credentials error. `getUserApiToken({ email, password })` and `getUserStorageState({ email, password })` use the explicitly supplied credentials instead. Adding credential fields to `dev.ts`, `stage.ts`, or `prod.ts` does not populate `process.env`.
 
@@ -84,12 +89,42 @@ If `TEST_ENV` is not set, the project uses `dev`.
 
 If `TEST_ENV` has an unknown value, the project throws an error.
 
+## Browser Selection
+
+Set `TEST_BROWSER` to select one browser project locally or in CI.
+
+Supported values: `chromium`, `firefox`, `webkit`,
+`mobile-chrome`, and `mobile-safari`.
+
+If the value is missing, empty, or contains only whitespace,
+the selected environment's `projects` list is used.
+An unknown value raises an error listing the supported values.
+Values are case-sensitive; leading and trailing whitespace is trimmed.
+
+The API project remains available separately. Set `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` in the optional `.env` or your shell before running tests. See [Test Commands](./commands.md#test-commands).
+
+```dotenv
+TEST_ENV=prod
+TEST_BROWSER=firefox
+```
+
+PowerShell:
+
+```powershell
+$env:TEST_ENV = "prod"
+$env:TEST_BROWSER = "firefox"
+npm test -- tests/ui
+```
+
+After changing the configuration, refresh tests in VS Code
+and select the browser project in the Playwright sidebar.
+
 ## Headless Mode
 
-Each environment config defines `headless: true` as its default. `getEnvironment()` reads `process.env.HEADLESS` after the optional `.env` has been loaded:
+Each environment config defines `headless: true` as its default. `getEnvironment()` resolves headless mode after the optional `.env` has been loaded:
 
 ```ts
-const headless = process.env.HEADLESS;
+const headless = process.env.CI ? "true" : process.env.HEADLESS;
 
 return {
     ...environment,
@@ -99,7 +134,9 @@ return {
 };
 ```
 
-`HEADLESS=true` runs browsers without a window; `HEADLESS=false` opens browser windows. If the variable is missing or empty, the selected config's boolean is used. The comparison is case-sensitive: only the non-empty string `"true"` enables headless mode; other non-empty values produce `false`. There is no separate validation step.
+A non-empty `CI` variable forces headless mode, including when `HEADLESS=false`.
+
+Outside CI, `HEADLESS=true` runs browsers without a window; `HEADLESS=false` opens browser windows. If the variable is missing or empty, the selected config's boolean is used. The comparison is case-sensitive: only the non-empty string `"true"` enables headless mode; other non-empty values produce `false`. There is no separate validation step.
 
 The local example uses `HEADLESS=false`. An existing shell or CI variable takes precedence over `.env`. This setting is applied to browser projects in `availableProjects`; API-only tests do not launch a browser.
 
@@ -123,7 +160,7 @@ const env = getEnvironment();
 
 The dev and stage UI URLs are fake URLs for illustration only. Use prod for the public Practice Software Testing UI.
 
-| Environment | `baseApiURL` | `timeout` | `retries` | `projects` |
+| Environment | `baseApiURL` | `timeout` | `retries` | `projects` (default) |
 | --- | --- | --- | --- | --- |
 | `dev` | `http://localhost:8091` | `middleWaitTimeout` | `0` | `chromium` |
 | `stage` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari` |

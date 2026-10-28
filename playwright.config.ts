@@ -54,8 +54,9 @@ export default defineConfig({
     baseURL: env.baseURL,
     testIdAttribute: 'data-test',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* Keep screenshots and traces for failed tests. */
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
   },
 
   /* Run API tests once and other tests in the selected browser projects. */

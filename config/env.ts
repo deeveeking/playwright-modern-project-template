@@ -4,7 +4,11 @@ import { loadEnvFile } from "node:process";
 import { devConfig } from "./environments/dev";
 import { prodConfig } from "./environments/prod";
 import { stageConfig } from "./environments/stage";
-import { Environment, EnvironmentName } from "./types/types";
+import {
+    supportedBrowserProjects,
+    Environment,
+    EnvironmentName,
+} from "./types/types";
 
 const envFilePath = resolve(__dirname, "../.env");
 
@@ -21,12 +25,23 @@ const environments: Record<EnvironmentName, Environment> = {
 export const getEnvironment = (): Environment => {
     const environmentName = process.env.TEST_ENV || "dev";
     const headless = process.env.CI ? "true" : process.env.HEADLESS;
+    const browserName = process.env.TEST_BROWSER?.trim();
 
     if (environmentName in environments) {
         const environment = environments[environmentName as EnvironmentName];
+        const browserProject = supportedBrowserProjects.find(
+            project => project === browserName
+        );
+
+        if (browserName && !browserProject) {
+            throw new Error(
+                `Invalid TEST_BROWSER: ${browserName}. Available browsers: ${supportedBrowserProjects.join(", ")}`
+            );
+        }
 
         return {
             ...environment,
+            projects: browserProject ? [browserProject] : environment.projects,
             headless: headless
                 ? headless === "true"
                 : environment.headless,

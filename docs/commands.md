@@ -4,29 +4,49 @@ Commands are defined in `package.json`.
 
 ## Test Commands
 
-```bash
-npm test
-```
+| Command | Selection |
+| --- | --- |
+| `npm test` | All tests using the environment and browser selection resolved by the config. |
+| `npm run test:dev` | Sets `TEST_ENV=dev`. |
+| `npm run test:stage` | Sets `TEST_ENV=stage`. |
+| `npm run test:prod` | Sets `TEST_ENV=prod`. |
 
-Runs all Playwright tests.
+The environment scripts use POSIX shell syntax. In PowerShell, set `TEST_ENV` separately and run `npm test`.
 
-```bash
-npm run test:dev
-```
-
-Runs Playwright tests with `TEST_ENV=dev`.
-
-```bash
-npm run test:stage
-```
-
-Runs Playwright tests with `TEST_ENV=stage`.
+Set `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` in the optional root `.env` or through your shell. Forward Playwright arguments after `--`:
 
 ```bash
-npm run test:prod
+npm test -- tests/ui
+npm test -- tests/api --project=api
+npm test -- --list --reporter=list
 ```
 
-Runs Playwright tests with `TEST_ENV=prod`.
+Dev and stage UI URLs are illustrative placeholders. Select `prod` for the public demo UI.
+
+## UI Tests
+
+Install browser binaries before running UI tests:
+
+```bash
+npx playwright install
+```
+
+Set `TEST_ENV=prod` in `.env` or your shell, then run either login-flow suite:
+
+```bash
+npm test -- tests/ui/smoke
+npm test -- tests/ui/regression
+```
+
+Smoke tests cover sign-in, the account page, and sign-out. Regression tests cover an incorrect password and password recovery followed by sign-in. Each test creates its own user through the API and deletes it during teardown, so admin API credentials are required.
+
+Check discovery without launching browsers or sending API requests:
+
+```bash
+npm test -- tests/ui --list --reporter=list
+```
+
+These commands respect `TEST_BROWSER`. If it is empty or unset, all browser projects configured for prod are used.
 
 ## API Smoke Tests
 
@@ -89,24 +109,46 @@ The registration case sends one space in each of `email` and `password` and expe
 
 The user update case records its created user for cleanup in `afterAll`. The deleted-user search case removes its user within the test. Product and category retrieval cases create and delete their own resource before expecting 404; their cleanup sets remove IDs after successful deletion. Negative creation cases do not track a resource because creation is expected to fail.
 
-## Environment Variable
+## Environment Variables
 
-The environment config reads `process.env.TEST_ENV`.
+The config reads `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` from the process environment and optional root `.env`. Shell or CI variables take precedence over `.env`.
 
-The `test:dev`, `test:stage`, and `test:prod` scripts set this value before running Playwright.
+For example:
 
-These three scripts use POSIX shell syntax. In PowerShell, set the variable separately:
-
-```powershell
-$env:TEST_ENV = "stage"
-npx playwright test --project=api
+```dotenv
+TEST_ENV=prod
+TEST_BROWSER=chromium
+HEADLESS=true
 ```
 
-To use the values from the root `.env`, run:
+Then run `npm test`, `npm test -- tests/ui`, or `npm test -- tests/api --project=api`.
+
+A missing, empty, or whitespace-only `TEST_BROWSER` uses the selected environment's configured browser list. An invalid browser name fails configuration loading. This behavior is the same locally and in CI; the API project remains separate.
+
+PowerShell overrides:
 
 ```powershell
-npx playwright test --project=api
+$env:TEST_ENV = "prod"
+$env:TEST_BROWSER = "firefox"
+$env:HEADLESS = "true"
+npm test -- tests/ui
 ```
 
-Existing shell variables override `.env`, so remove a previous override with `Remove-Item Env:TEST_ENV` if you want to use the file's `TEST_ENV` value. API requests also require `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD`, supplied through the process environment or the optional local file. See [Environment Config](./environment-config.md#current-environment) for loading behavior and secrets storage.
+To remove these shell overrides and use the file's values again:
+
+```powershell
+Remove-Item Env:TEST_ENV, Env:TEST_BROWSER, Env:HEADLESS -ErrorAction SilentlyContinue
+```
+
+API requests also require `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD`, supplied through process variables or the optional file. See [Environment Config](./environment-config.md#current-environment) for loading behavior and secrets storage.
+
+## Reports
+
+Failed UI tests save screenshots when a page is available and retain traces, even without retries. These attachments appear in the HTML report and in the report uploaded by CI.
+
+```bash
+npx playwright show-report
+```
+
+See [Failure Artifacts](./playwright-config.md#failure-artifacts) and [CI](./ci.md#artifact).
 

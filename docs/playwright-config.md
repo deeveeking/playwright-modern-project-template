@@ -15,9 +15,10 @@ Playwright config is in `playwright.config.ts`.
 | `workers` | `process.env.CI ? 1 : undefined` | CI uses one worker. Local runs can use default workers. |
 | `reporter` | `html` | Playwright creates an HTML report. |
 | `use.baseURL` | `env.baseURL` | UI base URL comes from the selected environment config. |
-| Browser project `use.headless` | `env.headless` | Controls browser windows; `HEADLESS` overrides the selected environment's default. |
-| `projects` | `api` plus `env.projects` | API tests run in one dedicated project; browser projects come from the selected environment config. |
-| `trace` | `on-first-retry` | Trace is saved on first retry. |
+| Browser project `use.headless` | `env.headless` | `HEADLESS` overrides the environment default locally; a non-empty `CI` forces headless mode. |
+| `projects` | `api` plus `env.projects` | API tests run in one dedicated project; `TEST_BROWSER` selects one browser or the environment's default browser list is used. |
+| `screenshot` | `only-on-failure` | Screenshots are saved for failed UI tests when a page is available. |
+| `trace` | `retain-on-failure` | Traces are retained for failed tests, including the initial attempt. |
 
 ## Base URLs
 
@@ -32,7 +33,7 @@ The API URL is stored in `metadata.baseApiURL`, so API helpers and tests can rea
 
 ## Browser Projects
 
-The project chooses browser projects from the selected environment.
+The project uses the selected environment's browser list by default. Set `TEST_BROWSER` to `chromium`, `firefox`, `webkit`, `mobile-chrome`, or `mobile-safari` to select one browser locally or in CI. A missing, empty, or whitespace-only value uses the environment's default list. The `api` project stays available separately. See [Browser Selection](./environment-config.md#browser-selection) and [Commands](./commands.md).
 
 Each entry in `availableProjects` sets `headless` after its device preset:
 
@@ -40,15 +41,21 @@ Each entry in `availableProjects` sets `headless` after its device preset:
 use: { ...devices['Desktop Chrome'], headless: env.headless },
 ```
 
-The same setting applies to Firefox, WebKit, and both mobile browser projects. `getEnvironment()` resolves `HEADLESS` from the process environment or optional `.env`, falling back to the selected config when it is missing or empty. See [Headless Mode](./environment-config.md#headless-mode).
+The same setting applies to Firefox, WebKit, and both mobile browser projects. A non-empty `CI` forces headless mode. Outside CI, `getEnvironment()` resolves `HEADLESS` from the process environment or optional `.env`, falling back to the selected config when it is missing or empty. See [Headless Mode](./environment-config.md#headless-mode).
 
 The `api` project uses `testDir: './tests/api'` and `use.baseURL: env.baseApiURL`. Browser projects exclude that folder with `testIgnore: '**/tests/api/**'`, so API tests are not repeated for each browser. Other test folders remain included in browser projects.
 
-| Environment | Browser projects |
+| Environment | Browser projects (default) |
 | --- | --- |
 | `dev` | Chromium |
 | `stage` | Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari |
 | `prod` | Chromium, WebKit, Mobile Chrome, Mobile Safari |
+
+## Failure Artifacts
+
+Playwright attaches screenshots and traces from failed UI tests to the HTML report. Traces are retained even with `retries: 0`. A failure before a page or browser context is created may have no screenshot or trace; API-only tests do not produce browser screenshots.
+
+The CI workflow uploads `playwright-report/`, including its attachments, as the `playwright-report` artifact. Existing reports are not changed by configuration updates. Open a new report locally with `npx playwright show-report` or download and extract the CI artifact first. See [CI Artifacts](./ci.md#artifact).
 
 ## Optional Settings
 

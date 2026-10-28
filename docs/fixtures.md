@@ -36,7 +36,7 @@ test("User account is displayed", async ({ page, user }) => {
 });
 ```
 
-This is a usage example; no UI spec has been added yet. Use `TEST_ENV=prod` for the public UI. Dev and stage UI URLs are illustrative placeholders. `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are required to obtain the admin token used by registration and deletion.
+This is a fixture usage example. The implemented login-flow specs in `tests/ui/smoke/` and `tests/ui/regression/` use page objects provided by `fixtures/pagesFixture.ts`. Use `TEST_ENV=prod` for the public UI. Dev and stage UI URLs are illustrative placeholders. `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are required to obtain the admin token used by registration and deletion.
 
 The `user` fixture generates a registration request and returns credentials, the registration response as `profile`, and `cleanup()`. It deletes its created user after the dependent fixtures and test finish, including failures during API login or page navigation.
 

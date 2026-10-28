@@ -2,9 +2,9 @@
 
 This folder explains the current project structure and main settings.
 
-The project demonstrates Playwright framework architecture. Its implemented coverage consists of seven API smoke tests and seven API regression tests for users, products, and categories. UI, visual, accessibility, and performance folders provide structure for future tests.
+The project demonstrates Playwright framework architecture. Its implemented coverage consists of seven API smoke tests, seven API regression tests, two UI smoke tests, and two UI regression tests. API tests cover users, products, and categories; UI tests cover sign-in, sign-out, and password recovery. Visual, accessibility, and performance folders provide structure for future tests.
 
-Start with [API smoke commands](./commands.md#api-smoke-tests), [API regression commands](./commands.md#api-regression-tests), and [environment setup](./environment-config.md#current-environment). Product suites reuse existing category, brand, and image references while creating their own products.
+Start with [test scripts and UI commands](./commands.md#test-commands), [API smoke commands](./commands.md#api-smoke-tests), [API regression commands](./commands.md#api-regression-tests), and [environment setup](./environment-config.md#current-environment). Product suites reuse existing category, brand, and image references while creating their own products.
 
 ## Documentation Files
 
