@@ -15,16 +15,23 @@ Environment config lives in the `config/` folder.
 
 ## Environment Type
 
-The `Environment` interface describes the shape of each environment config.
+The `Environment` interface describes the static values stored in each environment config. `ResolvedEnvironment` extends it with the runtime `headless` boolean and is the explicit return type of `getEnvironment()`.
 
 ```ts
 export interface Environment {
     baseURL: string;
     baseApiURL: string;
-    headless: boolean;
     timeout: number;
     retries: number;
     projects: readonly EnvironmentProject[];
+}
+```
+
+The resolved configuration includes the computed headless setting:
+
+```ts
+export interface ResolvedEnvironment extends Environment {
+    headless: boolean;
 }
 ```
 
@@ -104,14 +111,14 @@ Values are case-sensitive; leading and trailing whitespace is trimmed.
 The API project remains available separately. Set `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` in the optional `.env` or your shell before running tests. See [Test Commands](./commands.md#test-commands).
 
 ```dotenv
-TEST_ENV=prod
+TEST_ENV=dev
 TEST_BROWSER=firefox
 ```
 
-PowerShell:
+Start the dev stack using [Local Docker Setup](./commands.md#local-docker-setup), then select a browser in PowerShell:
 
 ```powershell
-$env:TEST_ENV = "prod"
+$env:TEST_ENV = "dev"
 $env:TEST_BROWSER = "firefox"
 npm test -- tests/ui
 ```
@@ -121,28 +128,28 @@ and select the browser project in the Playwright sidebar.
 
 ## Headless Mode
 
-Each environment config defines `headless: true` as its default. `getEnvironment()` resolves headless mode after the optional `.env` has been loaded:
+`getEnvironment()` resolves headless mode after the optional `.env` has been loaded. The default `true` is defined in this method; the dev, stage, and prod config files do not store `headless`:
 
 ```ts
-const headless = process.env.CI ? "true" : process.env.HEADLESS;
+const headless = process.env.CI
+    ? true
+    : (process.env.HEADLESS || "true") === "true";
 
 return {
     ...environment,
-    headless: headless
-        ? headless === "true"
-        : environment.headless,
+    headless,
 };
 ```
 
-A non-empty `CI` variable forces headless mode, including when `HEADLESS=false`.
+A non-empty `CI` variable forces headless mode, including when `HEADLESS=false`. The CI workflow runs `npx playwright test` and uses the boolean resolved by `getEnvironment()`.
 
-Outside CI, `HEADLESS=true` runs browsers without a window; `HEADLESS=false` opens browser windows. If the variable is missing or empty, the selected config's boolean is used. The comparison is case-sensitive: only the non-empty string `"true"` enables headless mode; other non-empty values produce `false`. There is no separate validation step.
+Outside CI, `HEADLESS=true` runs browsers without a window; `HEADLESS=false` opens browser windows. If the variable is missing or empty, `getEnvironment()` defaults to `true`. The comparison is case-sensitive: among non-empty values, only `"true"` enables headless mode; other values produce `false`. There is no separate validation step.
 
 The local example uses `HEADLESS=false`. An existing shell or CI variable takes precedence over `.env`. This setting is applied to browser projects in `availableProjects`; API-only tests do not launch a browser.
 
 ## Getting Config
 
-Use `getEnvironment()` to get the selected config.
+Use `getEnvironment()` to get the selected config as `ResolvedEnvironment`.
 
 ```ts
 import { getEnvironment } from "../config/env";
@@ -150,23 +157,27 @@ import { getEnvironment } from "../config/env";
 const env = getEnvironment();
 ```
 
+## Local Docker Application
+
+CI uses the Docker-based dev environment because Cloudflare served security-verification pages to requests from GitHub Actions when tests targeted the public practicesoftwaretesting.com site. Those pages prevented the UI tests from reaching the application. Running the UI and API on localhost removes this dependency on the public site's Cloudflare checks. See [CI](./ci.md) for application startup, database initialization, and cleanup.
+
 ## Current Values
 
 | Environment | `baseURL` |
 | --- | --- |
-| `dev` | `https://dev.practicesoftwaretesting.com/` |
+| `dev` | `http://localhost:4200` |
 | `stage` | `https://stage.practicesoftwaretesting.com/` |
 | `prod` | `https://practicesoftwaretesting.com/` |
 
-The dev and stage UI URLs are fake URLs for illustration only. Use prod for the public Practice Software Testing UI.
+Dev uses the local Docker application. The stage UI URL is a placeholder. Prod uses the public Practice Software Testing UI.
 
 | Environment | `baseApiURL` | `timeout` | `retries` | `projects` (default) |
 | --- | --- | --- | --- | --- |
-| `dev` | `http://localhost:8091` | `middleWaitTimeout` | `0` | `chromium` |
+| `dev` | `http://localhost:8091` | `middleWaitTimeout` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
 | `stage` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari` |
 | `prod` | `https://api.practicesoftwaretesting.com` | `middleWaitTimeout` | `0` | `chromium`, `webkit`, `mobile-chrome`, `mobile-safari` |
 
-Stage and prod currently use the same API, so they do not isolate server data from each other. The local dev API must be started separately.
+CI starts the dev UI, API, and database through Docker Compose. For local dev runs, start the application stack before running tests. Stage and prod share the public API.
 
 Product relation IDs are not stored in environment configs. Product specs obtain current category, brand, and image IDs through `ProductsApi.getAll()` and `getById()` and pass them to `getCreateProductRequest()`.
 

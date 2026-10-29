@@ -104,7 +104,7 @@ a token for the supplied credentials and builds browser storage
 state with `localStorage["auth-token"]`.
 
 The origin comes from the selected environment's `baseURL`.
-Use `TEST_ENV=prod` for `https://practicesoftwaretesting.com/`.
+Use `TEST_ENV=dev` for the Docker UI at `http://localhost:4200` and its API at `http://localhost:8091`. Follow [Local Docker Setup](./commands.md#local-docker-setup) before running the example.
 
 ```ts
 import { getUserStorageState } from "../helpers/authHelper";
@@ -118,8 +118,7 @@ const page = await context.newPage();
 await page.goto(getEnvironment().baseURL);
 ```
 
-Storage state stays in memory. Close the browser context and call
-`ApiRequestHelper.dispose()` during test teardown.
+Storage state stays in memory. This is a manual setup example: close its browser context and call `ApiRequestHelper.dispose()` during teardown. With the project's [test fixtures](./fixtures.md), Playwright owns browser-context teardown and `_apiLifecycle` disposes the shared API context; specs should use those fixtures rather than duplicating cleanup.
 
 ## Error Handling
 

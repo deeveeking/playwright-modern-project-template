@@ -51,7 +51,7 @@
 - `getUserApiToken({ email, password })` performs an uncached login for explicit credentials. It does not switch the admin account used by API clients. `helpers/authHelper.ts` prepares browser storage state through `getUserStorageState()`; keep browser authentication separate from these admin API suites.
 - Ordinary helper requests always attach the cached Bearer token, including registration. The credentials must therefore belong to an existing account in the selected environment.
 - Keep login in the request helper; do not add a `UserApi.login` method, an `authenticated` flag, or custom authorization headers to tests.
-- Use `TEST_ENV` and the existing environment configuration for API URLs. Do not hardcode credentials or base URLs in specs. Prefer credentials injected from a secret manager; local `.env` files must be excluded from Git.
+- Use `TEST_ENV` and the existing environment configuration for API URLs. Do not hardcode credentials or base URLs in specs. The root `.env` example is currently tracked by Git; keep private credentials in process variables or a secrets manager and do not add private values to the tracked example.
 - The helper owns a shared context and token within a worker. Do not assume different API client instances represent independent authenticated users.
 - API client methods return parsed response data, not Playwright `APIResponse` objects. Do not call `.status()`, `.ok()`, or `.json()` on their results.
 - Non-success HTTP responses and transport errors reject the client call. For negative tests, assert the rejected promise using `.rejects` rather than treating the error body as a successful response.
@@ -155,11 +155,16 @@ test.describe("Admin User API Smoke Tests", () => {
 
 ## UI
 
-- Import `test` and `expect` from `fixtures/browserFixture.ts` for home-page navigation and prepared authentication. The exported test inherits `userApi` from `apiFixture.ts` and `user` from `userFixture.ts`.
+- Import `test` and `expect` from `fixtures/pagesFixture.ts` for page-object tests. This layer provides `mainPage`, `productDetailPage`, `cartPage`, `loginPage`, and `accountPage`, and inherits the browser, user, and API fixtures. Use `fixtures/browserFixture.ts` for tests that intentionally work directly with the browser page.
+- Keep locators and UI actions in page objects. Prefer stable `getByTestId()` selectors (configured for `data-test`) or semantic roles. Expose locator getters for assertions and keep assertions in specs.
+- Access shared navigation through the page object's `header`, for example `accountPage.header.signOut()`. Keep responsive menu handling in `HeaderComponent`.
+- Import expected UI text from `data/staticTestMessages.ts` for text assertions. Do not use these expected messages to construct page-object locators. The static values demonstrate the approach; an application manifest API can supply text when available.
+- Write each element assertion explicitly. Do not use loops or iterate over assertion lists in test bodies. Keep test cases independent and follow the existing fixture cleanup patterns.
+- Write comments and test titles in English. Obtain password recovery through `loginPage.openForgotPassword()`; it returns the next page object.
 - Requesting `page` uses a fresh user by default, prepares its token through `getUserStorageState()`, creates the isolated browser context, and opens `/` using the project's `baseURL`.
 - Tests can request `user` to access its `credentials`, optional `profile`, and `cleanup()` method. Use `user.cleanup()` when intentionally deleting a fixture-created user; direct deletion through `userApi` would leave its cleanup bookkeeping unchanged.
 - Existing accounts are supplied with `test.use({ userCredentials: { email, password } })`. They are not registered or deleted; their `profile` is undefined and `cleanup()` does nothing.
 - For login and other unauthenticated tests, use `test.use({ storageState: { cookies: [], origins: [] } })` within the appropriate file or group. Do not request `user` in these tests or hooks unless account creation is explicitly needed.
 - Keep browser and page lifecycle management with Playwright. The `user` fixture deletes its created user after each test, and the automatic `_apiLifecycle` fixture disposes the shared API context at worker teardown after API clients and user fixtures finish.
-- Use `TEST_ENV=prod` for the current public UI. Dev and stage UI URLs are illustrative placeholders. Tests creating users require admin API credentials for registration and cleanup.
-- See [Test Fixtures](../docs/fixtures.md) for lifecycle details and usage examples. No UI specs have been implemented yet.
+- Use `TEST_ENV=dev` for the local Docker UI. Follow [Local Docker Setup](../docs/commands.md#local-docker-setup) before local runs; CI starts the stack automatically. The stage UI URL is a placeholder; prod uses the public site. Tests creating users require admin API credentials for registration and cleanup.
+- See [Test Fixtures](../docs/fixtures.md) for lifecycle details. Implemented login-flow examples are available in `tests/ui/smoke/` and `tests/ui/regression/`.

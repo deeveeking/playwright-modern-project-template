@@ -33,10 +33,10 @@ npm ci
 
 Supply `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` for an existing admin account through process environment variables or the optional root `.env` file. The root `.env` is currently tracked by Git; keep private credentials in process variables or a secrets manager. See [Environment Config](./docs/environment-config.md#current-environment).
 
-In PowerShell, select the public API environment and check test discovery:
+After [starting the local Docker application](./docs/commands.md#local-docker-setup), select dev in PowerShell and check test discovery:
 
 ```powershell
-$env:TEST_ENV = "prod"
+$env:TEST_ENV = "dev"
 npx playwright test --project=api --list --reporter=list
 ```
 
@@ -49,14 +49,16 @@ npx playwright test tests/api/regression --project=api
 
 Listing tests sends no API requests. Running the suites creates and deletes test data. API-only tests do not require installed browsers. UI tests require browser binaries; install them with `npx playwright install`.
 
-The prod UI URL is `https://practicesoftwaretesting.com/`. Dev and stage UI URLs are illustrative placeholders. The dev API points to `http://localhost:8091`; stage and prod currently share the public API URL.
+Dev uses the Docker application at `http://localhost:4200` and its API at `http://localhost:8091`. The stage UI URL is a placeholder; prod uses the public site.
+
+CI uses Docker because Cloudflare served security-verification pages instead of the application UI to GitHub Actions. See [CI](./docs/ci.md#why-docker).
 
 ## Run UI Tests
 
-Set these values in the root `.env` or your shell, alongside the admin API credentials:
+For local runs, follow [Local Docker Setup](./docs/commands.md#local-docker-setup) to fetch the application, start its containers, initialize the database, and configure seed credentials. Then set these values in `.env` or your shell:
 
 ```dotenv
-TEST_ENV=prod
+TEST_ENV=dev
 TEST_BROWSER=chromium
 HEADLESS=true
 ```
@@ -67,7 +69,7 @@ Run the UI suites:
 npm test -- tests/ui
 ```
 
-Set `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` through `.env` or your shell. Empty `TEST_BROWSER` uses the selected environment's configured browser list; the same rule applies in CI. CI always runs headless when `CI` is non-empty.
+Set `TEST_ENV`, `TEST_BROWSER`, and `HEADLESS` through `.env` or your shell. Empty `TEST_BROWSER` uses the selected environment's configured browser list; the same rule applies in CI. CI runs browsers in headless mode. Set the repository variable `TEST_BROWSER` to select one browser in CI; an empty value uses all dev browser projects.
 
 Check discovery without launching browsers:
 

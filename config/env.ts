@@ -8,6 +8,7 @@ import {
     supportedBrowserProjects,
     Environment,
     EnvironmentName,
+    ResolvedEnvironment,
 } from "./types/types";
 
 const envFilePath = resolve(__dirname, "../.env");
@@ -22,9 +23,11 @@ const environments: Record<EnvironmentName, Environment> = {
     prod: prodConfig,
 };
 
-export const getEnvironment = (): Environment => {
+export const getEnvironment = (): ResolvedEnvironment => {
     const environmentName = process.env.TEST_ENV || "dev";
-    const headless = process.env.CI ? "false" : process.env.HEADLESS;
+    const headless = process.env.CI
+        ? true
+        : (process.env.HEADLESS || "true") === "true";
     const browserName = process.env.TEST_BROWSER?.trim();
 
     if (environmentName in environments) {
@@ -42,9 +45,7 @@ export const getEnvironment = (): Environment => {
         return {
             ...environment,
             projects: browserProject ? [browserProject] : environment.projects,
-            headless: headless
-                ? headless === "true"
-                : environment.headless,
+            headless,
         };
     }
 

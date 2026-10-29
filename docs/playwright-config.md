@@ -15,7 +15,7 @@ Playwright config is in `playwright.config.ts`.
 | `workers` | `process.env.CI ? 1 : undefined` | CI uses one worker. Local runs can use default workers. |
 | `reporter` | `html` | Playwright creates an HTML report. |
 | `use.baseURL` | `env.baseURL` | UI base URL comes from the selected environment config. |
-| Browser project `use.headless` | `env.headless` | `HEADLESS` overrides the environment default locally; a non-empty `CI` forces headless mode. |
+| Browser project `use.headless` | `env.headless` | `getEnvironment()` resolves `HEADLESS` locally and forces headless mode in CI. |
 | `projects` | `api` plus `env.projects` | API tests run in one dedicated project; `TEST_BROWSER` selects one browser or the environment's default browser list is used. |
 | `screenshot` | `only-on-failure` | Screenshots are saved for failed UI tests when a page is available. |
 | `trace` | `retain-on-failure` | Traces are retained for failed tests, including the initial attempt. |
@@ -41,13 +41,13 @@ Each entry in `availableProjects` sets `headless` after its device preset:
 use: { ...devices['Desktop Chrome'], headless: env.headless },
 ```
 
-The same setting applies to Firefox, WebKit, and both mobile browser projects. A non-empty `CI` forces headless mode. Outside CI, `getEnvironment()` resolves `HEADLESS` from the process environment or optional `.env`, falling back to the selected config when it is missing or empty. See [Headless Mode](./environment-config.md#headless-mode).
+The same setting applies to Firefox, WebKit, and both mobile browser projects. `getEnvironment()` resolves `HEADLESS` from process variables or the optional `.env`, defaulting to `true` when the value is missing or empty. In CI, it always returns `headless: true`. Playwright receives the resolved boolean through `env.headless`; the static environment config files do not contain this setting. See [Headless Mode](./environment-config.md#headless-mode).
 
 The `api` project uses `testDir: './tests/api'` and `use.baseURL: env.baseApiURL`. Browser projects exclude that folder with `testIgnore: '**/tests/api/**'`, so API tests are not repeated for each browser. Other test folders remain included in browser projects.
 
 | Environment | Browser projects (default) |
 | --- | --- |
-| `dev` | Chromium |
+| `dev` | Chromium, WebKit, Mobile Chrome, Mobile Safari |
 | `stage` | Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari |
 | `prod` | Chromium, WebKit, Mobile Chrome, Mobile Safari |
 

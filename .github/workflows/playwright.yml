@@ -8,6 +8,18 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      TEST_ENV: dev
+      TEST_BROWSER: ${{ vars.TEST_BROWSER || '' }}
+      SPRINT: sprint5
+      DISABLE_LOGGING: "true"
+      PST_APP_REF: ae7caecb811dd8952c09d997e69be7cb946ecd44
+      PST_APP_DIR: ${{ runner.temp }}/practice-software-testing
+      COMPOSE_FILE: ${{ runner.temp }}/practice-software-testing/docker-compose.yml
+      COMPOSE_PROJECT_NAME: pst-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      # Public seed credentials for this isolated test database.
+      API_ADMIN_EMAIL: admin@practicesoftwaretesting.com
+      API_ADMIN_PASSWORD: welcome01
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -15,15 +27,75 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
+    - name: Checkout test application
+      run: |
+        git init "$PST_APP_DIR"
+        git -C "$PST_APP_DIR" remote add origin https://github.com/testsmith-io/practice-software-testing.git
+        git -C "$PST_APP_DIR" fetch --depth=1 origin "$PST_APP_REF"
+        git -C "$PST_APP_DIR" checkout --detach FETCH_HEAD
+        sed -i '/^APP_ENV=/d' "$PST_APP_DIR/sprint5/API/.env"
+        printf '\nAPP_ENV=testing\n' >> "$PST_APP_DIR/sprint5/API/.env"
+    - name: Start test application
+      run: docker compose up -d --build mariadb laravel-api web angular-ui
+    - name: Install API dependencies
+      run: |
+        docker compose exec -T -u root -e COMPOSER_ALLOW_SUPERUSER=1 laravel-api sh -ec '
+          composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --ignore-platform-req=ext-ffi
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+          chown -R www-data:www-data storage bootstrap/cache
+        '
+    - name: Initialize test database
+      run: |
+        for attempt in $(seq 1 60); do
+          if docker compose exec -T mariadb mysql --connect-timeout=2 --host=127.0.0.1 --user=user --password=root --database=toolshop --execute='SELECT 1' >/dev/null 2>&1; then
+            break
+          fi
+          if [ "$attempt" -eq 60 ]; then
+            echo "MariaDB did not become ready."
+            exit 1
+          fi
+          sleep 2
+        done
+        docker compose exec -T laravel-api php artisan migrate:fresh --seed --force
+    - name: Wait for UI and API
+      run: |
+        for url in http://localhost:4200 http://localhost:8091/status; do
+          curl --fail --silent --show-error --output /dev/null \
+            --retry 60 --retry-delay 2 --retry-all-errors --retry-max-time 300 \
+            --connect-timeout 2 --max-time 10 "$url"
+        done
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Install Xvfb
-      run: sudo apt-get install -y xvfb
     - name: Run Playwright tests
-      run: xvfb-run -a npx playwright test --headed
+      run: npx playwright test
+    - name: Collect application logs
+      if: ${{ always() }}
+      continue-on-error: true
+      run: |
+        mkdir -p docker-logs
+        if [ -f "$COMPOSE_FILE" ]; then
+          docker compose ps --all > docker-logs/containers.txt 2>&1
+          docker compose logs --no-color > docker-logs/application.log 2>&1
+          if [ -f "$PST_APP_DIR/sprint5/API/storage/logs/laravel.log" ]; then
+            cp "$PST_APP_DIR/sprint5/API/storage/logs/laravel.log" docker-logs/laravel.log
+          fi
+        fi
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+    - uses: actions/upload-artifact@v4
+      if: ${{ always() }}
+      with:
+        name: docker-logs
+        path: docker-logs/
+        if-no-files-found: ignore
+        retention-days: 30
+    - name: Stop test application
+      if: ${{ always() }}
+      run: |
+        if [ -f "$COMPOSE_FILE" ]; then
+          docker compose down --volumes --remove-orphans
+        fi
