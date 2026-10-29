@@ -14,8 +14,6 @@ jobs:
       SPRINT: sprint5
       DISABLE_LOGGING: "true"
       PST_APP_REF: ae7caecb811dd8952c09d997e69be7cb946ecd44
-      PST_APP_DIR: ${{ runner.temp }}/practice-software-testing
-      COMPOSE_FILE: ${{ runner.temp }}/practice-software-testing/docker-compose.yml
       COMPOSE_PROJECT_NAME: pst-ci-${{ github.run_id }}-${{ github.run_attempt }}
       # Public seed credentials for this isolated test database.
       API_ADMIN_EMAIL: admin@practicesoftwaretesting.com
@@ -29,6 +27,10 @@ jobs:
       run: npm ci
     - name: Checkout test application
       run: |
+        PST_APP_DIR="$RUNNER_TEMP/practice-software-testing"
+        echo "PST_APP_DIR=$PST_APP_DIR" >> "$GITHUB_ENV"
+        echo "COMPOSE_FILE=$PST_APP_DIR/docker-compose.yml" >> "$GITHUB_ENV"
+
         git init "$PST_APP_DIR"
         git -C "$PST_APP_DIR" remote add origin https://github.com/testsmith-io/practice-software-testing.git
         git -C "$PST_APP_DIR" fetch --depth=1 origin "$PST_APP_REF"
