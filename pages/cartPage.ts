@@ -1,8 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { removeDollarSign } from "../helpers/dataHelper";
 import { PaymentMethod } from "./enums/paymentMethod";
+import { HeaderComponent } from "./components/headerComponent";
 
 export class CartPage {
+    public readonly header = new HeaderComponent(this.page);
+
     private readonly totalPrice =
         this.page.getByTestId("cart-total");
     private readonly products =

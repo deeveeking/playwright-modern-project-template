@@ -1,8 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { removeDollarSign } from "../helpers/dataHelper";
 import { ProductDetailPage } from "./productDetailPage";
+import { HeaderComponent } from "./components/headerComponent";
 
 export class MainPage {
+    public readonly header = new HeaderComponent(this.page);
+
     private readonly productCards =
         this.page.locator('a[data-test^="product-"]');
     private readonly searchInput =

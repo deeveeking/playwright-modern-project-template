@@ -8,6 +8,8 @@ import type {
 import type { MainPage } from "../pages/mainPage";
 import type { ProductDetailPage } from "../pages/productDetailPage";
 import type { CartPage } from "../pages/cartPage";
+import type { LoginPage } from "../pages/loginPage";
+import type { AccountPage } from "../pages/accountPage";
 
 export interface TestUser {
     credentials: LoginUserRequest;
@@ -37,4 +39,6 @@ export interface PagesFixtures {
     mainPage: MainPage;
     productDetailPage: ProductDetailPage;
     cartPage: CartPage;
+    loginPage: LoginPage;
+    accountPage: AccountPage;
 }
