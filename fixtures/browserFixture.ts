@@ -9,6 +9,12 @@ export const test = userTest.extend({
 
     page: async ({ page }, use) => {
         await page.goto("/");
+        await page.locator("app-header")
+            .getByRole("navigation")
+            .waitFor({
+                state: "visible",
+                timeout: 30_000,
+            });
         await use(page);
     },
 });

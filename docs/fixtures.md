@@ -1,13 +1,36 @@
 # Test Fixtures
 
-The fixtures extend Playwright Test in three stages. Each module exports `test`; `apiTest` and `userTest` are local import aliases that identify the preceding stage.
+The fixtures extend Playwright Test in four layers: `apiFixture` -> `userFixture` -> `browserFixture` -> `pagesFixture`. Each module exports `test`; `apiTest`, `userTest`, and `browserTest` are local import aliases that identify the preceding layer.
 
 | File | Responsibility |
 | --- | --- |
-| `fixtures/types.ts` | Interfaces for API fixtures, user options, and test-user data. |
+| `fixtures/types.ts` | Interfaces for API fixtures, user options, test-user data, and page-object fixtures. |
 | `fixtures/apiFixture.ts` | Provides `userApi`, `productsApi`, and `categoryApi` once per worker; `_apiLifecycle` disposes their shared HTTP context at worker teardown. |
 | `fixtures/userFixture.ts` | Provides a new user per test, or uses explicit credentials for an existing user. |
-| `fixtures/browserFixture.ts` | Prepares `storageState` from the user's token and opens the configured home page. |
+| `fixtures/browserFixture.ts` | Prepares `storageState`, opens the home page, and waits up to 30 seconds for navigation inside `app-header` to become visible. |
+| `fixtures/pagesFixture.ts` | Provides page objects using the browser fixture's page and inherits API and user fixtures. |
+
+## Page Object Fixtures
+
+Use `fixtures/pagesFixture.ts` when a test needs page objects. It provides `mainPage`, `productDetailPage`, `cartPage`, `loginPage`, and `accountPage`, and inherits the API, user, and browser fixtures. Each requested page object receives the current test's `page`.
+
+```ts
+import { test, expect } from "../../../fixtures/pagesFixture";
+import { staticTestMessages } from "../../../data/staticTestMessages";
+
+test("User account is displayed", async ({ page, accountPage }) => {
+    await accountPage.open();
+
+    await expect(page).toHaveURL("/account");
+    await expect(accountPage.getTitle()).toBeVisible();
+    await expect(accountPage.getTitle())
+        .toHaveText(staticTestMessages.accountPage.title);
+});
+```
+
+The inherited browser fixture registers and authenticates a user by default. Request `user` explicitly when the test needs its credentials or profile. The login-flow specs override `storageState` to start signed out, then request `user` for UI sign-in.
+
+Page objects expose the shared `HeaderComponent` through their `header` property, for example `accountPage.header.signOut()`. `loginPage.openForgotPassword()` returns a `ForgotPasswordPage`; it is created through navigation rather than a separate fixture.
 
 ## API Tests
 
@@ -36,7 +59,7 @@ test("User account is displayed", async ({ page, user }) => {
 });
 ```
 
-This is a usage example; no UI spec has been added yet. Use `TEST_ENV=prod` for the public UI. Dev and stage UI URLs are illustrative placeholders. `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are required to obtain the admin token used by registration and deletion.
+This is a fixture usage example. The implemented login-flow specs in `tests/ui/smoke/` and `tests/ui/regression/` use page objects provided by `fixtures/pagesFixture.ts`. Use `TEST_ENV=dev` for the local Docker UI. Start the Docker stack before local runs; CI starts it automatically. The stage UI URL is a placeholder; prod uses the public site. `API_ADMIN_EMAIL` and `API_ADMIN_PASSWORD` are required to obtain the admin token used by registration and deletion.
 
 The `user` fixture generates a registration request and returns credentials, the registration response as `profile`, and `cleanup()`. It deletes its created user after the dependent fixtures and test finish, including failures during API login or page navigation.
 
