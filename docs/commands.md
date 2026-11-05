@@ -144,14 +144,31 @@ Install browser binaries before running UI tests:
 npx playwright install
 ```
 
-Start the Docker stack and set `TEST_ENV=dev` in `.env` or your shell, then run either login-flow suite:
+Start the Docker stack and set `TEST_ENV=dev` in `.env` or your shell, then run either UI suite:
 
 ```bash
 npm test -- tests/ui/smoke
 npm test -- tests/ui/regression
 ```
 
-Smoke tests cover sign-in, the account page, and sign-out. Regression tests cover an incorrect password and password recovery followed by sign-in. Each test creates its own user through the API and deletes it during teardown, so admin API credentials are required.
+The suites contain seven smoke cases and eight regression cases for authentication, catalog search, product details and quantity, and cart behavior. See [UI Coverage](../README.md#ui-coverage) for the full mapping.
+
+UI inventory specs import `fixtures/productFixture.ts`. Its `productCount` option defaults to `1`; the cart removal group sets it to `2` with `test.use()`. Product data and cart cleanup are owned by the fixture. Each browser test creates its own user unless explicitly configured otherwise, so admin API credentials are required. See [UI Product Data](./fixtures.md#ui-product-data).
+
+Run only the cart specs:
+
+```bash
+npm test -- tests/ui/smoke/cartFlow.spec.ts
+npm test -- tests/ui/regression/cartFlow.spec.ts
+```
+
+Run only the two-product removal case:
+
+```bash
+npm test -- tests/ui/regression/cartFlow.spec.ts --grep "User can remove products and empty the cart"
+```
+
+The cash-on-delivery smoke case validates the payment method and its success message. It stops before final order confirmation and invoice creation.
 
 Check discovery without launching browsers or sending API requests:
 

@@ -1,5 +1,7 @@
 import type { CategoryApi } from "../api/categoryApi/categoryApi";
 import type { ProductsApi } from "../api/productsApi/productsApi";
+import { CartsApi } from "../api/cartsApi/cartsApi";
+import { CreateProductResponse } from "../api/productsApi/types";
 import type { UserApi } from "../api/userApi/userApi";
 import type {
     LoginUserRequest,
@@ -20,6 +22,7 @@ export interface TestUser {
 export interface ApiFixtures {
     userApi: UserApi;
     productsApi: ProductsApi;
+    cartsApi: CartsApi;
     categoryApi: CategoryApi;
 }
 
@@ -41,4 +44,13 @@ export interface PagesFixtures {
     cartPage: CartPage;
     loginPage: LoginPage;
     accountPage: AccountPage;
+}
+
+export interface ProductOptions {
+    productCount: number;
+}
+
+export interface ProductFixtures {
+    product: CreateProductResponse;
+    products: CreateProductResponse[];
 }

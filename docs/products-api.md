@@ -71,7 +71,7 @@ Both product specs import `test` and `expect` from `fixtures/apiFixture.ts`. The
 
 Reusing reference data keeps this architecture example simple. Related data could instead be prepared before each test. The generator requires the three IDs as arguments; they are not hardcoded or read from environment configs. Setup directly accesses `products.data[0]` without a separate list-length assertion.
 
-`getCreateProductRequest(categoryId, brandId, productImageId)` in `helpers/requestHelper.ts` uses Faker for a name with a UUID, description, positive two-decimal price, booleans, CO2 rating, and positive stock quantity. Existing relation IDs are passed in rather than randomly generated. The tests derive `is_eco_friendly` from rating A or B and expect admin `in_stock` to equal the submitted stock.
+`getCreateProductRequest(categoryId, brandId, productImageId)` in `helpers/requestHelper.ts` uses Faker for a product name without a UUID suffix, description, positive two-decimal price, booleans, CO2 rating, and positive stock quantity. Existing relation IDs are passed in rather than randomly generated. The tests derive `is_eco_friendly` from rating A or B and expect admin `in_stock` to equal the submitted stock.
 
 Each test records its created product ID before asserting the response. `afterAll({ productsApi })` deletes the recorded products with `Promise.all`. The shared `_apiLifecycle` fixture disposes the HTTP context at worker teardown, including when server-data cleanup fails. Specs do not call `dispose()` themselves. See [Test Fixtures](./fixtures.md).
 
@@ -87,3 +87,7 @@ npx playwright test tests/api/smoke/adminProducts.spec.ts --project=api
 - Retrieving a deleted product expects status 404. This test creates and deletes its own product before requesting its ID.
 
 Errors are checked with `.rejects.toThrow()` including the method, URL, and status. The retrieval case adds its product ID to a cleanup set and removes it after successful deletion. `afterAll({ productsApi })` deletes any remaining recorded products; the shared fixture owns request-context disposal. The invalid creation case does not track IDs because the request is expected to fail.
+
+## UI Product Preparation
+
+UI inventory tests use `fixtures/productFixture.ts`, which prepares `productCount` products with predictable price, stock, and discount settings. The default is one product; `products` provides the array and `product` its first item. The fixture deletes the current cart through `cartsApi` before deleting these products. See [UI Product Data](./fixtures.md#ui-product-data) and [Carts API](./carts-api.md).

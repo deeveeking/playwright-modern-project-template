@@ -43,7 +43,7 @@ export const getCreateProductRequest = (
     productImageId: string
 ): CreateProductRequest => {
     return {
-        name: `${faker.commerce.productName()} ${faker.string.uuid()}`,
+        name: `${faker.commerce.productName()}`,
         description: faker.commerce.productDescription(),
         price: faker.number.int({ min: 100, max: 100000 }) / 100,
         category_id: categoryId,

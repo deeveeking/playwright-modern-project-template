@@ -12,6 +12,8 @@ export class MainPage {
         this.page.getByTestId("search-query");
     private readonly searchButton =
         this.page.getByTestId("search-submit");
+    private readonly searchResetButton =
+        this.page.getByTestId("search-reset");
     private readonly searchResults =
         this.page.getByTestId("search_completed");
     private readonly noResults =
@@ -27,6 +29,10 @@ export class MainPage {
             .allInnerTexts();
 
         return names.map(name => name.trim());
+    }
+
+    public async isNoResultsMessageVisible(): Promise<boolean> {
+        return this.noResults.isVisible();
     }
 
     public getProductCardByName(productName: string): Locator {
@@ -45,6 +51,10 @@ export class MainPage {
         await this.page.waitForURL("**/product/*");
 
         return new ProductDetailPage(this.page);
+    }
+
+    public async resetSearch(): Promise<void> {
+        await this.searchResetButton.click();
     }
 
     public async searchProduct(query: string): Promise<void> {

@@ -2,7 +2,7 @@
 
 This folder explains the current project structure and main settings.
 
-The project demonstrates Playwright framework architecture. Its implemented coverage consists of seven API smoke tests, seven API regression tests, two UI smoke tests, and two UI regression tests. API tests cover users, products, and categories; UI tests cover sign-in, sign-out, and password recovery. Visual, accessibility, and performance folders provide structure for future tests.
+The project demonstrates Playwright framework architecture. Its implemented coverage consists of seven API smoke tests, seven API regression tests, seven UI smoke tests, and eight UI regression tests. API tests cover users, products, and categories. UI tests cover authentication, the catalog, product details, and cart behavior, including payment validation. Visual, accessibility, and performance folders provide structure for future tests.
 
 Start with [test scripts and UI commands](./commands.md#test-commands), [API smoke commands](./commands.md#api-smoke-tests), [API regression commands](./commands.md#api-regression-tests), and [environment setup](./environment-config.md#current-environment). Product suites reuse existing category, brand, and image references while creating their own products.
 
@@ -12,6 +12,8 @@ Start with [test scripts and UI commands](./commands.md#test-commands), [API smo
 - [Environment Config](./environment-config.md)
 - [Playwright Config](./playwright-config.md)
 - [Test Fixtures](./fixtures.md)
+- [UI Product Data and productCount](./fixtures.md#ui-product-data)
+- [UI Coverage](../README.md#ui-coverage)
 - [TypeScript Config](./typescript-config.md)
 - [Commands](./commands.md)
 - [CI](./ci.md)
@@ -19,7 +21,8 @@ Start with [test scripts and UI commands](./commands.md#test-commands), [API smo
 - [Browser Authentication Helper](./api-request-helper.md#browser-authentication)
 - [User API](./user-api.md)
 - [Products API](./products-api.md)
+- [Carts API](./carts-api.md)
 - [Category API](./category-api.md)
 - [Logger Helper](./logger-helper.md)
-- [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) — API rules, a registration example, and UI fixture conventions.
+- [E2E Test Generation Instructions](../agents/generate-e2e-instruction.md) - API rules, a registration example, and UI fixture/data conventions.
 
