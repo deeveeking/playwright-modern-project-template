@@ -1,6 +1,7 @@
 import { test as base } from "@playwright/test";
 import { UserApi } from "../api/userApi/userApi";
 import { ProductsApi } from "../api/productsApi/productsApi";
+import { CartsApi } from "../api/cartsApi/cartsApi";
 import { CategoryApi } from "../api/categoryApi/categoryApi";
 import { ApiRequestHelper } from "../helpers/apiRequestHelper";
 import type { ApiWorkerFixtures } from "./types";
@@ -27,6 +28,13 @@ export const test = base.extend<{}, ApiWorkerFixtures>({
     productsApi: [
         async ({}, use) => {
             await use(new ProductsApi());
+        },
+        { scope: "worker" },
+    ],
+
+    cartsApi: [
+        async ({}, use) => {
+            await use(new CartsApi());
         },
         { scope: "worker" },
     ],

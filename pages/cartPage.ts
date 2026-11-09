@@ -8,6 +8,8 @@ export class CartPage {
 
     private readonly totalPrice =
         this.page.getByTestId("cart-total");
+    private readonly emptyCartMessage =
+        this.page.locator("app-cart").getByRole("paragraph");
     private readonly products =
         this.page.getByRole("row").filter({
             has: this.page.getByTestId("product-title"),
@@ -41,6 +43,14 @@ export class CartPage {
         return this.paymentSuccessMessage;
     }
 
+    public async isEmptyCartMessageVisible(): Promise<boolean> {
+        return this.emptyCartMessage.isVisible();
+    }
+
+    public async isProceedToCheckoutVisible(): Promise<boolean> {
+        return this.proceedToCheckoutButton.isVisible();
+    }
+
     public getProductByName(productName: string): Locator {
         return this.products.filter({
             has: this.page.getByRole("spinbutton", {
@@ -48,6 +58,14 @@ export class CartPage {
                 exact: true,
             }),
         });
+    }
+
+    public async getProductQuantity(productName: string): Promise<number> {
+        const quantity = await this.getProductByName(productName)
+            .getByRole("spinbutton")
+            .inputValue();
+
+        return Number(quantity);
     }
 
     public async getTotalPrice(): Promise<string> {

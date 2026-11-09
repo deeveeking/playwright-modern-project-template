@@ -10,8 +10,12 @@ export class MainPage {
         this.page.locator('a[data-test^="product-"]');
     private readonly searchInput =
         this.page.getByTestId("search-query");
+    private readonly filtersButton =
+        this.page.locator('button[data-test="filters"]');
     private readonly searchButton =
         this.page.getByTestId("search-submit");
+    private readonly searchResetButton =
+        this.page.getByTestId("search-reset");
     private readonly searchResults =
         this.page.getByTestId("search_completed");
     private readonly noResults =
@@ -27,6 +31,10 @@ export class MainPage {
             .allInnerTexts();
 
         return names.map(name => name.trim());
+    }
+
+    public async isNoResultsMessageVisible(): Promise<boolean> {
+        return this.noResults.isVisible();
     }
 
     public getProductCardByName(productName: string): Locator {
@@ -47,7 +55,23 @@ export class MainPage {
         return new ProductDetailPage(this.page);
     }
 
+    private async openFilters(): Promise<void> {
+        await this.searchInput.waitFor({ state: "attached" });
+
+        if (!(await this.searchInput.isVisible())) {
+            await this.filtersButton.click();
+        }
+
+        await this.searchInput.waitFor({ state: "visible" });
+    }
+
+    public async resetSearch(): Promise<void> {
+        await this.openFilters();
+        await this.searchResetButton.click();
+    }
+
     public async searchProduct(query: string): Promise<void> {
+        await this.openFilters();
         await this.searchInput.fill(query);
         await this.searchButton.click();
         await this.searchResults.waitFor();

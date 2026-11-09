@@ -8,7 +8,9 @@ This project has a simple structure for a modern Playwright test framework.
 | --- | --- |
 | `api/` | Place for API clients, API helpers, and request logic. |
 | `agents/` | API test generation instructions and UI fixture conventions in `generate-e2e-instruction.md`. |
-| `fixtures/` | Four fixture layers for worker-scoped API clients, test users, authenticated browser pages, and page objects. See [Test Fixtures](./fixtures.md). |
+| `fixtures/` | Five layers for worker-scoped API clients, test users, authenticated pages, page objects, and configurable product data. See [Test Fixtures](./fixtures.md). |
+| `fixtures/productFixture.ts` | `productCount` defaults to 1; `products` contains prepared inventory, `product` exposes its first item, and teardown deletes the cart before products. |
+| `api/cartsApi/` | `CartsApi.delete(cartId)` clears carts through the shared API helper during UI fixture teardown. |
 | `helpers/` | Shared helpers, including `ApiRequestHelper`, request generators (`getRegisterUserRequest`, `getSearchUserRequest`, `getCreateProductRequest`, `getCreateCategoryRequest`) in `requestHelper.ts`, and the Pino loggers in `loggerHelper.ts`. |
 | `helpers/authHelper.ts` | `getUserStorageState()` prepares in-memory browser storage state with a user token in `localStorage["auth-token"]`. |
 | `helpers/types/` | Place for helper-related types. |
@@ -29,13 +31,15 @@ This project has a simple structure for a modern Playwright test framework.
 | `tests/api/regression/` | Seven regression tests across user, product, and category API specs. |
 | `tests/api/smoke/` | Smoke tests: `adminUserApi.spec.ts` covers registration, email update, and deletion; `adminProducts.spec.ts` and `adminCategory.spec.ts` cover creation and retrieval by ID for products and categories. |
 | `tests/ui/` | UI smoke and regression specs using page-object fixtures. |
-| `tests/ui/smoke/` | Two login-flow cases covering sign-in, account-page elements, sign-out, and protected account access. |
-| `tests/ui/regression/` | Two login-flow cases covering an incorrect password and password recovery followed by sign-in. |
+| `tests/ui/smoke/` | Seven cases across `loginFlow.spec.ts`, `productFlow.spec.ts`, `productDetailFlow.spec.ts`, and `cartFlow.spec.ts`. |
+| `tests/ui/regression/` | Eight cases across the same four filenames: login errors/recovery, catalog search states, quantity controls, and cart quantity/removal. |
 | `tests/visual/` | Visual tests and visual checks. |
 | `tests/accessibility/` | Accessibility tests. |
 | `tests/performance/` | Performance tests. |
 
 The six implemented API specs sit directly under `smoke/` and `regression/`; there is no `admin/` subfolder. Their filenames retain the `admin` prefix because the suites use admin credentials. There are seven tests in each suite.
+
+The UI suites contain fifteen cases in eight spec files. The eleven catalog, product-detail, and cart cases extend the four login-flow cases. See [UI Coverage](../README.md#ui-coverage) for the scenario mapping.
 
 ## Page Objects and Locator Scope
 
@@ -58,7 +62,7 @@ is unique across the page.
 
 ## Shared UI Components and Messages
 
-`fixtures/pagesFixture.ts` supplies page objects for the current test. Each page object composes a `HeaderComponent` using that same browser page; specs use methods such as `accountPage.header.signOut()` for shared navigation.
+`fixtures/pagesFixture.ts` supplies page objects for the current test. UI cases needing prepared catalog data import `fixtures/productFixture.ts`, which inherits those page objects and provides one or more products. Each page object composes a `HeaderComponent` using that same browser page; specs use methods such as `accountPage.header.signOut()` for shared navigation.
 
 Expected UI copy lives in `data/staticTestMessages.ts` for clarity. Specs import these values for explicit text assertions. In a real application, a manifest API can provide the source text when available; this example keeps a static snapshot. Locators and UI actions belong in page objects and components.
 

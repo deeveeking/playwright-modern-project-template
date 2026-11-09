@@ -15,7 +15,7 @@
 
 ### Setup and teardown
 
-- The worker-scoped client fixtures instantiate `UserApi`, `ProductsApi`, and `CategoryApi` directly in `fixtures/apiFixture.ts`. Tests receive clients through fixture parameters. Do not duplicate client setup or HTTP-context disposal in spec hooks.
+- The worker-scoped client fixtures instantiate `UserApi`, `ProductsApi`, `CartsApi`, and `CategoryApi` directly in `fixtures/apiFixture.ts`. Tests receive clients through fixture parameters. Do not duplicate client setup or HTTP-context disposal in spec hooks.
 - Product specs keep `beforeAll({ productsApi })` to obtain relation references. User and category specs do not need a hook solely to initialize a client.
 - Use `test.beforeAll` and `test.afterAll` for suite setup and teardown.
 - The worker-scoped `_apiLifecycle` fixture uses `auto: true` to close the shared context once after ordinary fixtures finish, including failed test-data cleanup. Do not add unused `_apiLifecycle` parameters to API client fixtures, request it directly in specs, or add `ApiRequestHelper.dispose()` to API spec hooks.
@@ -155,16 +155,40 @@ test.describe("Admin User API Smoke Tests", () => {
 
 ## UI
 
-- Import `test` and `expect` from `fixtures/pagesFixture.ts` for page-object tests. This layer provides `mainPage`, `productDetailPage`, `cartPage`, `loginPage`, and `accountPage`, and inherits the browser, user, and API fixtures. Use `fixtures/browserFixture.ts` for tests that intentionally work directly with the browser page.
-- Keep locators and UI actions in page objects. Prefer stable `getByTestId()` selectors (configured for `data-test`) or semantic roles. Expose locator getters for assertions and keep assertions in specs.
+- Import `test` and `expect` from `fixtures/pagesFixture.ts` for page-object tests without prepared product data. This provides `mainPage`, `productDetailPage`, `cartPage`, `loginPage`, and `accountPage`, and inherits browser, user, and API fixtures. Use `fixtures/browserFixture.ts` for tests intentionally working directly with the browser page.
+- Import from `fixtures/productFixture.ts` for UI cases needing prepared catalog products. Request `product` for the first product or `products` for the complete array. Both use the same prepared data and cleanup.
+- `productCount` defaults to `1`. Set `test.use({ productCount: 2 })` inside the describe group that needs two products and destructure `const [firstProduct, secondProduct] = products` in its test. The option must be a positive integer. Keep the default for unrelated groups.
+- Keep inventory preparation and cleanup in the product fixture. It reuses existing relation IDs, prepares ordinary in-stock products without location/rental/eco discounts, deletes the current test cart through `cartsApi`, and then deletes all created products. A `finally` block in the fixture handles partial setup and test failures.
+- Keep locators and UI actions in page objects. Prefer stable `getByTestId()` selectors (configured for `data-test`) or semantic roles scoped to the relevant component. Locator getters support Playwright assertions; boolean visibility methods return `Promise<boolean>` for explicit truthy/falsy checks.
+- Open product details directly with `productDetailPage.open(product.id)` when catalog navigation is not the behavior being tested. Test catalog-to-product navigation separately through `mainPage.clickProductCard()`.
+- `addToCart()` waits for its POST response. Complete the loading action before reading scalar/boolean getters; use locator assertions to wait for UI transitions.
 - Access shared navigation through the page object's `header`, for example `accountPage.header.signOut()`. Keep responsive menu handling in `HeaderComponent`.
-- Import expected UI text from `data/staticTestMessages.ts` for text assertions. Do not use these expected messages to construct page-object locators. The static values demonstrate the approach; an application manifest API can supply text when available.
-- Write each element assertion explicitly. Do not use loops or iterate over assertion lists in test bodies. Keep test cases independent and follow the existing fixture cleanup patterns.
-- Write comments and test titles in English. Obtain password recovery through `loginPage.openForgotPassword()`; it returns the next page object.
-- Requesting `page` uses a fresh user by default, prepares its token through `getUserStorageState()`, creates the isolated browser context, and opens `/` using the project's `baseURL`.
-- Tests can request `user` to access its `credentials`, optional `profile`, and `cleanup()` method. Use `user.cleanup()` when intentionally deleting a fixture-created user; direct deletion through `userApi` would leave its cleanup bookkeeping unchanged.
-- Existing accounts are supplied with `test.use({ userCredentials: { email, password } })`. They are not registered or deleted; their `profile` is undefined and `cleanup()` does nothing.
-- For login and other unauthenticated tests, use `test.use({ storageState: { cookies: [], origins: [] } })` within the appropriate file or group. Do not request `user` in these tests or hooks unless account creation is explicitly needed.
-- Keep browser and page lifecycle management with Playwright. The `user` fixture deletes its created user after each test, and the automatic `_apiLifecycle` fixture disposes the shared API context at worker teardown after API clients and user fixtures finish.
-- Use `TEST_ENV=dev` for the local Docker UI. Follow [Local Docker Setup](../docs/commands.md#local-docker-setup) before local runs; CI starts the stack automatically. The stage UI URL is a placeholder; prod uses the public site. Tests creating users require admin API credentials for registration and cleanup.
-- See [Test Fixtures](../docs/fixtures.md) for lifecycle details. Implemented login-flow examples are available in `tests/ui/smoke/` and `tests/ui/regression/`.
+- Import expected UI text from `data/staticTestMessages.ts` for text assertions. Do not construct locators from those expected messages. An application manifest API can supply text when available.
+- Write each element assertion explicitly and give new or updated assertions an English diagnostic message. Do not use loops, assertion-list iteration, or try/catch/finally in UI test bodies. Fixture code owns preparation and cleanup.
+- Use `toEqual()` for value equality and `toBeTruthy()`/`toBeFalsy()` for boolean results. Keep expected quantities/counts in named variables. UI money getters return strings; format numeric API prices and computed totals with `toFixed(2)`.
+- Format assertions with the actual value on the `expect` line, the diagnostic message on the next line, and the matcher on its own indented line. Do not insert blank lines between consecutive assertions.
+- Write comments and test titles in English. Search queries must be between 3 and 40 characters; avoid full UUID suffixes in product names submitted to UI search.
+- The cash-on-delivery smoke case checks payment validation after the first payment check. Final order confirmation and invoice creation require additional behavior and cleanup beyond the current case.
+- Obtain password recovery through `loginPage.openForgotPassword()`; it returns the next page object.
+- Requesting `page` uses a fresh user by default, prepares a token through `getUserStorageState()`, creates an isolated browser context, and opens `/` using the configured `baseURL`. Request `user` to access credentials, optional profile, and `cleanup()`.
+- Use `user.cleanup()` when intentionally deleting a fixture-created user. Existing accounts supplied with `test.use({ userCredentials: { email, password } })` are not registered or deleted by the fixture.
+- Start unauthenticated groups with `test.use({ storageState: { cookies: [], origins: [] } })`. Request `user` only when the scenario needs a newly registered account.
+- Playwright owns browser and page teardown. The user fixture deletes its user after dependent fixtures finish, and `_apiLifecycle` disposes the shared API context at worker teardown.
+- Use `TEST_ENV=dev` for the local Docker UI. Follow [Local Docker Setup](../docs/commands.md#local-docker-setup); CI starts the stack automatically. Stage has a placeholder UI URL; prod targets the public site. API admin credentials are required for preparation and cleanup.
+- See [Test Fixtures](../docs/fixtures.md), [Carts API](../docs/carts-api.md), and [UI coverage](../README.md#ui-coverage). Specs are in `tests/ui/smoke/` and `tests/ui/regression/`.
+
+Assertion example:
+
+```ts
+import { expect, test } from "../../../fixtures/productFixture";
+
+test("Product quantity starts at one", async ({ productDetailPage, product }) => {
+    const expectedQuantity = 1;
+
+    await productDetailPage.open(product.id);
+
+    expect(await productDetailPage.getQuantity(),
+        "Product quantity should start at the expected value")
+        .toEqual(expectedQuantity);
+});
+```
