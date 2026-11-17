@@ -21,4 +21,5 @@ export interface Environment {
 
 export interface ResolvedEnvironment extends Environment {
     headless: boolean;
+    threads: number;
 }

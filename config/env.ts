@@ -29,6 +29,7 @@ export const getEnvironment = (): ResolvedEnvironment => {
         ? true
         : (process.env.HEADLESS || "true") === "true";
     const browserName = process.env.TEST_BROWSER?.trim();
+    const threads = process.env.CI ? 3 : 1;
 
     if (environmentName in environments) {
         const environment = environments[environmentName as EnvironmentName];
@@ -46,6 +47,7 @@ export const getEnvironment = (): ResolvedEnvironment => {
             ...environment,
             projects: browserProject ? [browserProject] : environment.projects,
             headless,
+            threads,
         };
     }
 
